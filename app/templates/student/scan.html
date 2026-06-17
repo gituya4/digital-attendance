@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+
+{% block title %}Scan QR Code - AttendKU{% endblock %}
+
+{% block content %}
+<div class="scan-page">
+    <div class="scan-container">
+        <div class="scan-header">
+            <h1>Scan QR Code</h1>
+            <p class="subtitle">Point your camera at the lecturer's QR code</p>
+        </div>
+
+        <div class="camera-wrapper">
+            <video id="camera-feed" class="camera-feed" autoplay playsinline></video>
+            <div class="scan-overlay">
+                <div class="scan-reticle">
+                    <div class="reticle-corner top-left"></div>
+                    <div class="reticle-corner top-right"></div>
+                    <div class="reticle-corner bottom-left"></div>
+                    <div class="reticle-corner bottom-right"></div>
+                    <div class="scan-line"></div>
+                </div>
+            </div>
+            <div id="camera-error" class="camera-error" style="display: none;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                    <circle cx="12" cy="13" r="4"></circle>
+                </svg>
+                <p>Camera access required. Please allow in your browser settings.</p>
+                <button onclick="window.location.reload()" class="btn btn-primary">Retry</button>
+            </div>
+        </div>
+
+        <div id="pin-section" class="pin-section" style="display: none;">
+            <div class="pin-header">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="success-icon">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+                <h2>Enter Session PIN</h2>
+                <p>Enter the 4-digit PIN displayed by your lecturer</p>
+            </div>
+
+            <div class="pin-inputs">
+                <input type="text" maxlength="1" class="pin-box" data-index="0" inputmode="numeric">
+                <input type="text" maxlength="1" class="pin-box" data-index="1" inputmode="numeric">
+                <input type="text" maxlength="1" class="pin-box" data-index="2" inputmode="numeric">
+                <input type="text" maxlength="1" class="pin-box" data-index="3" inputmode="numeric">
+            </div>
+
+            <button id="submit-attendance" class="btn btn-primary btn-large" disabled>
+                Confirm Attendance
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="success-overlay" class="success-overlay" style="display: none;">
+    <div class="success-content">
+        <svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+        </svg>
+        <h1>Attendance Marked!</h1>
+        <p>Redirecting to dashboard...</p>
+    </div>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+
+<script src="https://unpkg.com/@zxing/library@latest"></script>
+<script src="/static/js/scanner.js"></script>
+<script src="{{ url_for('static', filename='js/utils.js') }}"></script>
+<script>
+let scanner = null;
+let scannedPayload = null;
+
+// PIN input handling
+const boxes = document.querySelectorAll('.pin-box');
+boxes.forEach((box, i) => {
+    box.addEventListener('input', e => {
+        e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(-1);
+        if (e.target.value) {
+            e.target.classList.add('filled');
+            if (i < boxes.length - 1) boxes[i + 1].focus();
+        }
+        checkSubmitReady();
+    });
+    box.addEventListener('keydown', e => {
+        if (e.key === 'Backspace' && !e.target.value && i > 0) {
+            boxes[i - 1].value = '';
+            boxes[i - 1].classList.remove('filled');
+            boxes[i - 1].focus();
+        }
+    });
+});
+
+function checkSubmitReady() {
+    const pin = [...boxes].map(b => b.value).join('');
+    const btn = document.getElementById('submit-attendance');
+    btn.disabled = !(pin.length === 4 && scannedPayload);
+}
+
+// Initialize scanner
+async function initScanner() {
+    try {
+        const permission = await CameraPermissionHandler.checkPermission();
+        if (permission === 'denied') {
+            document.getElementById('camera-error').style.display = 'flex';
+            document.getElementById('camera-feed').style.display = 'none';
+            return;
+        }
+
+        scanner = new QRScanner('camera-feed', onQRCodeScanned);
+        await scanner.start();
+    } catch (error) {
+        console.error('Scanner initialization error:', error);
+        document.getElementById('camera-error').style.display = 'flex';
+        document.getElementById('camera-feed').style.display = 'none';
+    }
+}
+
+function onQRCodeScanned(payload) {
+    scannedPayload = payload;
+    document.querySelector('.camera-wrapper').style.display = 'none';
+    document.getElementById('pin-section').style.display = 'block';
+    boxes[0].focus();
+    showToast('QR Code scanned! Enter the PIN.', 'success');
+    checkSubmitReady();
+}
+
+async function restartScanner() {
+    scannedPayload = null;
+    document.querySelector('.camera-wrapper').style.display = 'block';
+    document.getElementById('pin-section').style.display = 'none';
+    boxes.forEach(box => {
+        box.value = '';
+        box.classList.remove('filled');
+    });
+    checkSubmitReady();
+    
+    try {
+        await scanner.start();
+    } catch (error) {
+        console.error('Scanner restart error:', error);
+    }
+}
+
+// Submit attendance
+document.getElementById('submit-attendance').addEventListener('click', async () => {
+    const pin = [...boxes].map(b => b.value).join('');
+    const btn = document.getElementById('submit-attendance');
+    btn.disabled = true;
+    btn.innerHTML = 'Verifying...';
+    
+    try {
+        const res = await API.post('/student/mark', {
+            token: scannedPayload,
+            pin: pin
+        });
+        
+        if (res.success) {
+            document.getElementById('success-overlay').style.display = 'flex';
+            setTimeout(() => {
+                window.location.href = '/student/dashboard';
+            }, 2000);
+        } else {
+            showToast(res.error || 'Failed to mark attendance', 'error');
+            btn.disabled = false;
+            btn.innerHTML = 'Confirm Attendance';
+            // Restart scanner for another attempt
+            await restartScanner();
+        }
+    } catch (err) {
+        showToast('Network error. Please try again.', 'error');
+        btn.disabled = false;
+        btn.innerHTML = 'Confirm Attendance';
+        // Restart scanner for another attempt
+        await restartScanner();
+    }
+});
+
+// Initialize on load
+document.addEventListener('DOMContentLoaded', () => {
+    initScanner();
+});
+</script>
+{% endblock %}

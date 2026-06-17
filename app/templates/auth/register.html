@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - Digital Attendance System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Sora:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <style>
+        .register-container {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0D1B2A 0%, #1A2F4A 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+        }
+        
+        .register-card {
+            background-color: white;
+            border-radius: 12px;
+            padding: 2rem;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+        }
+        
+        .register-card h1 {
+            text-align: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .register-subtitle {
+            text-align: center;
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+        }
+        
+        .role-selector {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .role-option {
+            position: relative;
+        }
+        
+        .role-option input[type="radio"] {
+            display: none;
+        }
+        
+        .role-option label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+        
+        .role-option input[type="radio"]:checked + label {
+            border-color: var(--accent-teal);
+            background-color: rgba(0, 201, 177, 0.1);
+        }
+        
+        .role-option label:hover {
+            border-color: var(--accent-teal);
+        }
+        
+        .role-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        
+        .form-grid.full {
+            grid-template-columns: 1fr;
+        }
+        
+        .register-footer {
+            text-align: center;
+            margin-top: 2rem;
+            color: var(--text-muted);
+        }
+        
+        .register-footer a {
+            color: var(--accent-teal);
+            font-weight: 600;
+        }
+        
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="register-container">
+        <div class="register-card">
+            <h1>Create Account</h1>
+            <p class="register-subtitle">Join the digital attendance system</p>
+            
+            <div id="alertContainer"></div>
+            
+            <form id="registerForm">
+                <div class="role-selector">
+                    <div class="role-option">
+                        <input type="radio" id="role-student" name="role" value="student" checked>
+                        <label for="role-student">
+                            <span class="role-icon">👨‍🎓</span>
+                            <span>Student</span>
+                        </label>
+                    </div>
+                    <div class="role-option">
+                        <input type="radio" id="role-lecturer" name="role" value="lecturer">
+                        <label for="role-lecturer">
+                            <span class="role-icon">👨‍🏫</span>
+                            <span>Lecturer</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="form-grid full">
+                    <div class="form-group">
+                        <label for="full_name">Full Name</label>
+                        <input type="text" id="full_name" name="full_name" class="form-control" placeholder="John Doe" required>
+                    </div>
+                </div>
+                
+                <div id="studentFields">
+                    <div class="form-grid full">
+                        <div class="form-group">
+                            <label for="registration_number">Registration Number</label>
+                            <input type="text" id="registration_number" name="registration_number" class="form-control" placeholder="CS/MK/0792/09/23" required>
+                            <small style="color: var(--text-muted);">Format: XX/XX/0000/00/00</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="lecturerFields" class="hidden">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="staff_id">Staff ID</label>
+                            <input type="text" id="staff_id" name="staff_id" class="form-control" placeholder="LEC001">
+                        </div>
+                        <div class="form-group">
+                            <label for="department">Department</label>
+                            <input type="text" id="department" name="department" class="form-control" placeholder="Computer Science">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-grid full">
+                    <div class="form-group">
+                        <label for="email">Email Address</label>
+                        <input type="email" id="email" name="email" class="form-control" placeholder="your@email.com" required>
+                    </div>
+                </div>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" class="form-control" placeholder="••••••••" required>
+                        <small style="color: var(--text-muted);">Min 8 chars, 1 uppercase, 1 number</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirm_password">Confirm Password</label>
+                        <input type="password" id="confirm_password" name="confirm_password" class="form-control" placeholder="••••••••" required>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-lg btn-block">Create Account</button>
+                
+                <div class="register-footer">
+                    <p>Already have an account? <a href="/login">Sign in</a></p>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script src="{{ url_for('static', filename='js/utils.js') }}"></script>
+    <script>
+        const roleInputs = document.querySelectorAll('input[name="role"]');
+        const studentFields = document.getElementById('studentFields');
+        const lecturerFields = document.getElementById('lecturerFields');
+        
+        roleInputs.forEach(input => {
+            input.addEventListener('change', (e) => {
+                if (e.target.value === 'student') {
+                    studentFields.classList.remove('hidden');
+                    lecturerFields.classList.add('hidden');
+                    document.getElementById('registration_number').required = true;
+                    document.getElementById('staff_id').required = false;
+                    document.getElementById('department').required = false;
+                } else {
+                    studentFields.classList.add('hidden');
+                    lecturerFields.classList.remove('hidden');
+                    document.getElementById('registration_number').required = false;
+                    document.getElementById('staff_id').required = true;
+                    document.getElementById('department').required = true;
+                }
+            });
+        });
+        
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const role = document.querySelector('input[name="role"]:checked').value;
+            const fullName = document.getElementById('full_name').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirm_password').value;
+            
+            if (password !== confirmPassword) {
+                const alertContainer = document.getElementById('alertContainer');
+                alertContainer.innerHTML = '<div class="alert alert-error">Passwords do not match</div>';
+                return;
+            }
+            
+            const userData = {
+                role,
+                full_name: fullName,
+                email,
+                password
+            };
+            
+            if (role === 'student') {
+                userData.registration_number = document.getElementById('registration_number').value;
+            } else {
+                userData.staff_id = document.getElementById('staff_id').value;
+                userData.department = document.getElementById('department').value;
+            }
+            
+            try {
+                await API.post('/auth/register', userData);
+                Toast.success('Registration successful! Redirecting to login...');
+                setTimeout(() => {
+                    window.location.href = '/login';
+                }, 1500);
+            } catch (error) {
+                const alertContainer = document.getElementById('alertContainer');
+                alertContainer.innerHTML = `<div class="alert alert-error">${error.message}</div>`;
+            }
+        });
+    </script>
+</body>
+</html>

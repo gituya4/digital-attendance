@@ -1,0 +1,561 @@
+{% extends "base.html" %}
+
+{% block title %}Active Session - AttendKU{% endblock %}
+
+{% block content %}
+<div class="app-shell">
+    <!-- Sidebar -->
+    <aside class="app-sidebar">
+        <div class="sidebar-logo">
+            <div class="sidebar-logo-mark">A</div>
+            <span class="sidebar-logo-text">Attend<span>KU</span></span>
+        </div>
+        
+        <div class="sidebar-user">
+            <div class="sidebar-avatar" id="sidebarAvatar"></div>
+            <div class="sidebar-user-info">
+                <div class="sidebar-user-name" id="sidebarUserName">Loading...</div>
+                <div class="sidebar-user-role">Lecturer</div>
+            </div>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <a class="sidebar-nav-item" href="/dashboard">
+                <i data-lucide="layout-dashboard"></i>
+                <span class="sidebar-nav-label">Dashboard</span>
+            </a>
+            <a class="sidebar-nav-item active" href="#">
+                <i data-lucide="qr-code"></i>
+                <span class="sidebar-nav-label">Active Session</span>
+            </a>
+        </nav>
+        
+        <button class="sidebar-collapse-btn" onclick="toggleSidebar()">
+            <i data-lucide="panel-left-close"></i>
+            <span>Collapse</span>
+        </button>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="app-main">
+        <!-- Topbar -->
+        <div class="app-topbar">
+            <div style="display:flex;align-items:center;gap:12px;">
+                <a href="/dashboard" class="btn-icon" style="margin-right:8px;">
+                    <i data-lucide="arrow-left" style="width:18px;height:18px;"></i>
+                </a>
+                <h1 style="font-family:var(--font-display);font-size:1.25rem;font-weight:600;">Active Session</h1>
+            </div>
+            <button onclick="endSession()" class="btn btn-danger btn-sm">
+                <i data-lucide="square" style="width:14px;height:14px;"></i> End Session
+            </button>
+        </div>
+
+        <!-- Content -->
+        <div class="app-content">
+            <div class="grid grid-2" style="align-items:start;">
+                <!-- Left Column - QR Panel -->
+                <div class="fade-up s1">
+                    <div class="card" style="background:var(--navy);color:white;">
+                        <div class="card-header" style="border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:1rem;">
+                            <span style="font-size:11px;font-weight:600;color:var(--teal);letter-spacing:0.1em;text-transform:uppercase;">Live Session</span>
+                            <span class="badge badge-teal">Active</span>
+                        </div>
+                        
+                        <!-- QR Code -->
+                        <div style="background:white;border-radius:var(--radius-lg);padding:16px;margin:1.25rem 0;display:flex;align-items:center;justify-content:center;">
+                            <img id="qrImage" src="" style="width:260px;height:260px;display:block;" alt="Session QR Code">
+                        </div>
+                        
+                        <!-- Countdown bar -->
+                        <div class="qr-countdown-track">
+                            <div class="qr-countdown-fill" id="countdownBar" style="width:100%;"></div>
+                        </div>
+                        <div style="text-align:center;margin:8px 0;font-family:var(--font-mono);font-size:13px;color:rgba(255,255,255,0.5);">
+                            Rotates in <span id="countdownSecs" style="color:var(--teal);font-weight:600;">30</span>s
+                        </div>
+                        
+                        <!-- PIN Display -->
+                        <div style="background:rgba(0,201,177,0.08);border:1px solid rgba(0,201,177,0.2);border-radius:var(--radius-md);padding:1.25rem;text-align:center;margin-top:1rem;">
+                            <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:8px;letter-spacing:0.08em;text-transform:uppercase;">Session PIN</div>
+                            <div id="sessionPin" style="font-family:var(--font-mono);font-size:44px;font-weight:700;color:var(--teal);letter-spacing:16px;">Loading...</div>
+                            <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:8px;font-style:italic;">Announce this verbally to your class</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Unit Info -->
+                    <div class="card fade-up s2" style="margin-top:1.5rem;">
+                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em;">Unit</div>
+                        <div style="font-family:var(--font-display);font-size:1.125rem;font-weight:600;margin-bottom:4px;" id="unitName">Loading...</div>
+                        <div class="mono" style="font-size:13px;color:var(--teal);font-weight:500;" id="unitCode">Loading...</div>
+                        <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--text-muted);">
+                            <span id="sessionStartTime">Started: Loading...</span>
+                            <span>Duration: <span id="sessionDuration">0:00</span></span>
+                        </div>
+                    </div>
+                    
+                    <!-- Session Notes -->
+                    <div class="card fade-up s3" style="margin-top:1.5rem;">
+                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em;">Session Notes</div>
+                        <textarea id="sessionNotes" rows="3" 
+                                  style="width:100%;padding:12px;border:1px solid var(--border);border-radius:var(--radius-md);font-family:inherit;font-size:14px;resize:vertical;"
+                                  placeholder="What was covered today? Any homework or announcements?"
+                                  onblur="saveSessionNotes()"></textarea>
+                        <div id="notesSavedIndicator" style="font-size:12px;color:var(--teal);margin-top:4px;display:none;">✓ Saved</div>
+                    </div>
+                    
+                    <!-- Manual Mark Button -->
+                    <button onclick="openManualMarkModal()" class="btn btn-outline btn-block fade-up s4" style="margin-top:1rem;">
+                        <i data-lucide="user-plus" style="width:16px;height:16px;"></i> Mark Student Manually
+                    </button>
+                </div>
+
+                <!-- Right Column - Live Attendance -->
+                <div class="fade-up s2">
+                    <div class="card" style="display:flex;flex-direction:column;min-height:500px;">
+                        <div class="card-header" style="border-bottom:1px solid var(--border);padding-bottom:1rem;margin-bottom:1.25rem;">
+                            <span class="card-title">Live Attendance</span>
+                            <span style="font-family:var(--font-display);font-size:20px;font-weight:700;">
+                                <span id="presentCount" style="color:var(--teal);">0</span>
+                                <span style="color:var(--text-muted);font-size:14px;">/ <span id="totalEnrolled">Loading...</span></span>
+                            </span>
+                        </div>
+                        
+                        <div class="progress-track" style="margin-bottom:1.25rem;">
+                            <div class="progress-fill" id="attendanceBar" style="--progress-value:0%;width:0%;transition:width 0.5s ease;"></div>
+                        </div>
+                        
+                        <div id="attendanceList" style="flex:1;overflow-y:auto;max-height:500px;">
+                            <!-- Empty State -->
+                            <div class="empty-state" id="emptyState">
+                                <i data-lucide="users" class="empty-state-icon"></i>
+                                <p class="empty-state-title">Waiting for students</p>
+                                <p class="empty-state-text">Students will appear here as they scan the QR code</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Manual Mark Modal -->
+<div id="manualMarkModal" class="modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
+    <div class="card" style="width:90%;max-width:500px;margin:auto;animation:scaleIn 0.3s ease;max-height:80vh;overflow-y:auto;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;">
+            <h3 style="font-family:var(--font-display);font-size:1.125rem;font-weight:600;">Mark Student Manually</h3>
+            <button onclick="closeManualMarkModal()" class="btn-icon" style="width:32px;height:32px;">
+                <i data-lucide="x" style="width:18px;height:18px;"></i>
+            </button>
+        </div>
+        
+        <div style="margin-bottom:1rem;">
+            <input type="text" id="manualMarkSearch" 
+                   style="width:100%;padding:12px;border:1px solid var(--border);border-radius:8px;font-size:14px;"
+                   placeholder="Search student by name or registration number..."
+                   oninput="searchNotMarkedStudents()">
+        </div>
+        
+        <div id="manualMarkResults" style="max-height:200px;overflow-y:auto;margin-bottom:1rem;">
+            <p style="color:var(--text-muted);text-align:center;padding:1rem;">Type to search students...</p>
+        </div>
+        
+        <div id="manualMarkReasonSection" style="display:none;margin-bottom:1rem;">
+            <label style="display:block;font-size:13px;font-weight:600;margin-bottom:0.5rem;">Reason for manual sign-in (min 10 characters):</label>
+            <textarea id="manualMarkReason" rows="3" 
+                      style="width:100%;padding:12px;border:1px solid var(--border);border-radius:8px;font-size:14px;resize:vertical;"
+                      placeholder="Explain why manual sign-in is needed..."></textarea>
+        </div>
+        
+        <div style="display:flex;gap:12px;">
+            <button onclick="closeManualMarkModal()" class="btn btn-outline" style="flex:1;">Cancel</button>
+            <button onclick="confirmManualMark()" id="confirmManualMarkBtn" class="btn btn-primary" style="flex:1;" disabled>
+                <i data-lucide="check" style="width:16px;height:16px;"></i> Confirm
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Session Summary Modal -->
+<div id="summaryModal" class="modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
+    <div class="card" style="width:90%;max-width:600px;margin:auto;animation:scaleIn 0.3s ease;max-height:90vh;overflow-y:auto;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;">
+            <h3 style="font-family:var(--font-display);font-size:1.25rem;font-weight:600;">Session Summary</h3>
+            <button onclick="closeSummaryModal()" class="btn-icon" style="width:32px;height:32px;">
+                <i data-lucide="x" style="width:18px;height:18px;"></i>
+            </button>
+        </div>
+        
+        <div id="summaryContent">
+            <p style="text-align:center;color:var(--text-muted);">Loading summary...</p>
+        </div>
+        
+        <div style="display:flex;gap:12px;margin-top:1.5rem;">
+            <button onclick="downloadCSV()" class="btn btn-outline" style="flex:1;">
+                <i data-lucide="download" style="width:16px;height:16px;"></i> Download CSV
+            </button>
+            <button onclick="closeSummaryModal()" class="btn btn-primary" style="flex:1;">Back to Dashboard</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let sessionId = null;
+let totalEnrolled = 0;
+let sessionData = null;
+let currentUser = null;
+let count = 0;
+let startTime = null;
+
+// Load user data
+async function loadUserData() {
+    try {
+        const response = await API.get('/auth/me');
+        currentUser = response.user;
+        
+        const initials = currentUser.full_name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+        document.getElementById('sidebarAvatar').textContent = initials;
+        document.getElementById('sidebarUserName').textContent = currentUser.full_name;
+    } catch (error) {
+        console.error('Failed to load user:', error);
+    }
+}
+
+// Load session data from URL
+async function loadSessionData() {
+    const pathParts = window.location.pathname.split('/');
+    sessionId = parseInt(pathParts[pathParts.length - 1]);
+    
+    if (!sessionId) {
+        showToast('Invalid session ID', 'error');
+        window.location.href = '/dashboard';
+        return;
+    }
+    
+    try {
+        // Get session info from QR endpoint
+        const response = await API.get(`/lecturer/sessions/${sessionId}/qr`);
+        if (response.success) {
+            sessionData = response.qr;
+            document.getElementById('sessionPin').textContent = sessionData.pin;
+            if (sessionData.qr_image) {
+                document.getElementById('qrImage').src = 'data:image/png;base64,' + sessionData.qr_image;
+            }
+            startTime = new Date();
+            
+            // Set session start time
+            document.getElementById('sessionStartTime').textContent = 'Started: ' + new Date().toLocaleTimeString();
+            
+            // Placeholder for unit info - would need separate API call to get full session details
+            document.getElementById('unitName').textContent = 'Active Session';
+            document.getElementById('unitCode').textContent = 'Session #' + sessionId;
+            document.getElementById('totalEnrolled').textContent = '-';
+        }
+    } catch (error) {
+        console.error('Failed to load session:', error);
+        showToast('Failed to load session data', 'error');
+    }
+}
+
+// QR Countdown
+let secs = 30;
+const bar = document.getElementById('countdownBar');
+const secsEl = document.getElementById('countdownSecs');
+
+function tick() {
+    secs--;
+    if (secs <= 0) {
+        secs = 30;
+        refreshQR();
+    }
+    const pct = (secs / 30) * 100;
+    bar.style.width = pct + '%';
+    bar.className = 'qr-countdown-fill' +
+        (secs <= 2 ? ' danger' : secs <= 6 ? ' warning' : '');
+    secsEl.textContent = secs;
+    secsEl.style.color = secs <= 2 ? 'var(--danger)' : secs <= 6 ? 'var(--warning)' : 'var(--teal)';
+}
+setInterval(tick, 1000);
+
+// Refresh QR code
+async function refreshQR() {
+    try {
+        const response = await API.get(`/lecturer/sessions/${sessionId}/qr`);
+        if (response.success && response.qr.qr_image) {
+            document.getElementById('qrImage').src = 'data:image/png;base64,' + response.qr.qr_image;
+            document.getElementById('sessionPin').textContent = response.qr.pin;
+        }
+    } catch (error) {
+        console.error('Failed to refresh QR:', error);
+    }
+}
+
+// Update session duration
+function updateDuration() {
+    if (!startTime) return;
+    const now = new Date();
+    const diff = Math.floor((now - startTime) / 1000);
+    const mins = Math.floor(diff / 60);
+    const secs = diff % 60;
+    document.getElementById('sessionDuration').textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+setInterval(updateDuration, 1000);
+
+// SSE live attendance
+let evtSource = null;
+
+function startSSE() {
+    evtSource = new EventSource(`/lecturer/sessions/${sessionId}/live`);
+    
+    evtSource.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        if (data.success && data.attendance) {
+            const student = data.attendance;
+            document.getElementById('emptyState')?.remove();
+    
+            count++;
+            const countEl = document.getElementById('presentCount');
+            countEl.textContent = count;
+            countEl.style.animation = 'none';
+            requestAnimationFrame(() => { countEl.style.animation = 'counterPop 0.4s ease'; });
+    
+            const bar = document.getElementById('attendanceBar');
+            const pct = totalEnrolled > 0 ? Math.round((count / totalEnrolled) * 100) : 0;
+            bar.style.width = pct + '%';
+            bar.style.setProperty('--progress-value', pct + '%');
+    
+            const initials = (student.full_name || student.name || 'User').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);animation:slideInLeft 0.35s ease both;';
+            row.innerHTML = `
+                <div class="table-avatar">${initials}</div>
+                <div style="flex:1;">
+                    <div style="font-size:14px;font-weight:600;">${student.full_name || student.name}</div>
+                    <div class="mono" style="font-size:11px;color:var(--text-muted);">${student.registration_number || student.reg_number}</div>
+                </div>
+                <div style="font-size:12px;color:var(--text-muted);">${new Date().toLocaleTimeString()}</div>
+                <i data-lucide="check-circle" style="width:16px;height:16px;color:var(--success);"></i>
+            `;
+            document.getElementById('attendanceList').prepend(row);
+            lucide.createIcons();
+            
+            showToast(`${student.full_name || student.name} marked present`, 'success', 2000);
+        }
+    };
+    
+    evtSource.onerror = function() {
+        console.error('SSE connection error');
+    };
+}
+
+// End session
+async function endSession() {
+    try {
+        const response = await API.post(`/lecturer/sessions/${sessionId}/close`, {});
+        if (response.success) {
+            if (evtSource) evtSource.close();
+            // Show summary modal instead of redirecting
+            await showSessionSummary();
+        } else {
+            showToast(response.error || 'Failed to end session', 'error');
+        }
+    } catch (error) {
+        showToast('Network error. Please try again.', 'error');
+    }
+}
+
+// Session Notes
+async function saveSessionNotes() {
+    const notes = document.getElementById('sessionNotes').value.trim();
+    try {
+        await API.put(`/lecturer/sessions/${sessionId}/notes`, { notes });
+        const indicator = document.getElementById('notesSavedIndicator');
+        indicator.style.display = 'block';
+        setTimeout(() => indicator.style.display = 'none', 2000);
+    } catch (error) {
+        console.error('Failed to save notes:', error);
+    }
+}
+
+// Manual Mark Functions
+function openManualMarkModal() {
+    document.getElementById('manualMarkModal').style.display = 'flex';
+    document.getElementById('manualMarkSearch').value = '';
+    document.getElementById('manualMarkResults').innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:1rem;">Type to search students...</p>';
+    document.getElementById('manualMarkReasonSection').style.display = 'none';
+    document.getElementById('manualMarkReason').value = '';
+    document.getElementById('confirmManualMarkBtn').disabled = true;
+    selectedStudentForManualMark = null;
+}
+
+function closeManualMarkModal() {
+    document.getElementById('manualMarkModal').style.display = 'none';
+    selectedStudentForManualMark = null;
+}
+
+async function searchNotMarkedStudents() {
+    const search = document.getElementById('manualMarkSearch').value.trim();
+    if (search.length < 2) {
+        document.getElementById('manualMarkResults').innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:1rem;">Type at least 2 characters...</p>';
+        return;
+    }
+    
+    try {
+        const response = await API.get(`/lecturer/sessions/${sessionId}/students/not-marked`);
+        if (response.success) {
+            notMarkedStudents = response.students.filter(s => 
+                s.full_name.toLowerCase().includes(search.toLowerCase()) ||
+                s.registration_number.toLowerCase().includes(search.toLowerCase())
+            );
+            
+            if (notMarkedStudents.length === 0) {
+                document.getElementById('manualMarkResults').innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:1rem;">No matching students found</p>';
+            } else {
+                document.getElementById('manualMarkResults').innerHTML = notMarkedStudents.map(s => {
+                    const initials = s.full_name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+                    return `
+                        <div onclick="selectStudentForManualMark(${s.user_id}, '${s.full_name}')" 
+                             style="padding:12px;border-bottom:1px solid var(--border);cursor:pointer;display:flex;align-items:center;gap:12px;hover:background:var(--navy-light);">
+                            <div style="width:32px;height:32px;background:var(--navy);color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;">${initials}</div>
+                            <div>
+                                <div style="font-weight:500;">${s.full_name}</div>
+                                <div class="mono" style="font-size:11px;color:var(--text-muted);">${s.registration_number}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+    } catch (error) {
+        console.error('Failed to search students:', error);
+    }
+}
+
+function selectStudentForManualMark(studentId, studentName) {
+    selectedStudentForManualMark = studentId;
+    document.getElementById('manualMarkReasonSection').style.display = 'block';
+    document.getElementById('confirmManualMarkBtn').disabled = false;
+}
+
+async function confirmManualMark() {
+    if (!selectedStudentForManualMark) return;
+    
+    const reason = document.getElementById('manualMarkReason').value.trim();
+    if (reason.length < 10) {
+        showToast('Reason must be at least 10 characters', 'error');
+        return;
+    }
+    
+    try {
+        const response = await API.post(`/lecturer/sessions/${sessionId}/manual-mark`, { 
+            student_id: selectedStudentForManualMark, 
+            reason 
+        });
+        if (response.success) {
+            showToast(`${response.student_name} marked manually`, 'success');
+            closeManualMarkModal();
+        } else {
+            showToast(response.error || 'Failed to mark attendance', 'error');
+        }
+    } catch (error) {
+        showToast('Network error. Please try again.', 'error');
+    }
+}
+
+// Session Summary
+async function showSessionSummary() {
+    try {
+        const response = await API.get(`/lecturer/sessions/${sessionId}/summary`);
+        if (response.success) {
+            const summary = response.summary;
+            document.getElementById('summaryContent').innerHTML = `
+                <div style="text-align:center;margin-bottom:1.5rem;">
+                    <div style="font-size:48px;font-weight:700;color:var(--teal);">${summary.attendance_pct}%</div>
+                    <div style="color:var(--text-muted);">Attendance Rate</div>
+                </div>
+                
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem;">
+                    <div style="text-align:center;padding:1rem;background:var(--navy-light);border-radius:8px;">
+                        <div style="font-size:24px;font-weight:700;color:var(--success);">${summary.present_count}</div>
+                        <div style="font-size:12px;color:var(--text-muted);">Present</div>
+                    </div>
+                    <div style="text-align:center;padding:1rem;background:var(--navy-light);border-radius:8px;">
+                        <div style="font-size:24px;font-weight:700;color:#f59e0b;">${summary.manual_count}</div>
+                        <div style="font-size:12px;color:var(--text-muted);">Manual</div>
+                    </div>
+                    <div style="text-align:center;padding:1rem;background:var(--navy-light);border-radius:8px;">
+                        <div style="font-size:24px;font-weight:700;color:var(--danger);">${summary.absent_count}</div>
+                        <div style="font-size:12px;color:var(--text-muted);">Absent</div>
+                    </div>
+                </div>
+                
+                <div style="display:flex;justify-content:space-between;margin-bottom:1.5rem;font-size:13px;color:var(--text-muted);">
+                    <span>Duration: ${summary.duration_minutes} min</span>
+                    <span>Enrolled: ${summary.total_enrolled}</span>
+                </div>
+                
+                ${summary.absent_students.length > 0 ? `
+                    <details style="margin-bottom:1.5rem;">
+                        <summary style="cursor:pointer;padding:8px;background:var(--navy-light);border-radius:8px;font-weight:600;">
+                            Absent Students (${summary.absent_students.length})
+                        </summary>
+                        <div style="padding:12px 0;">
+                            ${summary.absent_students.map(s => `
+                                <div style="padding:8px 0;border-bottom:1px solid var(--border);">
+                                    <div style="font-weight:500;">${s.full_name}</div>
+                                    <div class="mono" style="font-size:11px;color:var(--text-muted);">${s.registration_number}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </details>
+                ` : ''}
+            `;
+            document.getElementById('summaryModal').style.display = 'flex';
+        }
+    } catch (error) {
+        console.error('Failed to load summary:', error);
+        showToast('Failed to load session summary', 'error');
+        window.location.href = '/dashboard';
+    }
+}
+
+function closeSummaryModal() {
+    document.getElementById('summaryModal').style.display = 'none';
+    window.location.href = '/dashboard';
+}
+
+async function downloadCSV() {
+    try {
+        const response = await API.get(`/lecturer/units/session/${sessionId}/export`, { responseType: 'blob' });
+        const blob = new Blob([response], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `session_${sessionId}_attendance.csv`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        showToast('Failed to download CSV', 'error');
+    }
+}
+
+// Close modals on backdrop click
+document.getElementById('manualMarkModal').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeManualMarkModal();
+});
+
+document.getElementById('summaryModal').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeSummaryModal();
+});
+
+// Initialize
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadUserData();
+    await loadSessionData();
+    refreshQR();
+    startSSE();
+    lucide.createIcons();
+});
+</script>
+{% endblock %}

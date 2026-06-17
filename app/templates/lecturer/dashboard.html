@@ -1,0 +1,572 @@
+{% extends "base.html" %}
+
+{% block title %}Lecturer Dashboard - AttendKU{% endblock %}
+
+{% block content %}
+<div class="app-shell">
+    <!-- Sidebar -->
+    <aside class="app-sidebar">
+        <div class="sidebar-logo">
+            <div class="sidebar-logo-mark">A</div>
+            <span class="sidebar-logo-text">Attend<span>KU</span></span>
+        </div>
+        
+        <div class="sidebar-user">
+            <div class="sidebar-avatar" id="sidebarAvatar"></div>
+            <div class="sidebar-user-info">
+                <div class="sidebar-user-name" id="sidebarUserName">Loading...</div>
+                <div class="sidebar-user-role">Lecturer</div>
+            </div>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <a class="sidebar-nav-item active" href="/dashboard">
+                <i data-lucide="layout-dashboard"></i>
+                <span class="sidebar-nav-label">Dashboard</span>
+            </a>
+            <a class="sidebar-nav-item" href="#" onclick="showProfileEdit()">
+                <i data-lucide="user"></i>
+                <span class="sidebar-nav-label">Edit Profile</span>
+            </a>
+            <a class="sidebar-nav-item" href="/reports">
+                <i data-lucide="bar-chart-2"></i>
+                <span class="sidebar-nav-label">Reports</span>
+            </a>
+            <a class="sidebar-nav-item" href="#" onclick="handleLogout(event)">
+                <i data-lucide="log-out"></i>
+                <span class="sidebar-nav-label">Logout</span>
+            </a>
+        </nav>
+        
+        <button class="sidebar-collapse-btn" onclick="toggleSidebar()">
+            <i data-lucide="panel-left-close"></i>
+            <span>Collapse</span>
+        </button>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="app-main">
+        <!-- Topbar -->
+        <div class="app-topbar">
+            <div style="display:flex;align-items:center;gap:12px;">
+                <button class="btn-icon" onclick="toggleSidebar()" style="display:none;" id="mobileMenuBtn">
+                    <i data-lucide="menu"></i>
+                </button>
+                <h1 style="font-family:var(--font-display);font-size:1.25rem;font-weight:600;">Lecturer Dashboard</h1>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+                <span style="font-size:14px;color:var(--text-secondary);" id="topbarStaffId">Loading...</span>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="app-content">
+            <!-- Active Session Banner (shown when session active) -->
+            <div id="activeSessionBanner" style="display:none;margin-bottom:1.5rem;">
+                <div class="card" style="border-left:4px solid var(--teal);background:linear-gradient(135deg,var(--navy) 0%,var(--navy-mid) 100%);color:white;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
+                        <div>
+                            <div style="font-size:11px;color:var(--teal);font-weight:600;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:4px;">Session Active</div>
+                            <div id="activeSessionUnit" style="font-family:var(--font-display);font-size:18px;font-weight:700;margin-bottom:4px;">-</div>
+                            <div id="activeSessionStats" style="font-size:13px;color:rgba(255,255,255,0.6);">-</div>
+                        </div>
+                        <div style="display:flex;gap:8px;">
+                            <a id="viewSessionBtn" href="#" class="btn btn-outline btn-sm">View Session</a>
+                            <button onclick="endActiveSession()" class="btn btn-danger btn-sm">End Session</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Row -->
+            <div class="grid grid-4" style="margin-bottom:2rem;">
+                <div class="stat-card fade-up s1">
+                    <div class="stat-icon teal">
+                        <i data-lucide="book-open" style="width:22px;height:22px;"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" id="totalUnits">-</div>
+                        <div class="stat-label">Total Units</div>
+                    </div>
+                </div>
+                <div class="stat-card fade-up s2">
+                    <div class="stat-icon blue">
+                        <i data-lucide="calendar" style="width:22px;height:22px;"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" id="sessionsWeek">-</div>
+                        <div class="stat-label">Sessions This Week</div>
+                    </div>
+                </div>
+                <div class="stat-card fade-up s3">
+                    <div class="stat-icon green">
+                        <i data-lucide="users" style="width:22px;height:22px;"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" id="studentsToday">-</div>
+                        <div class="stat-label">Students Today</div>
+                    </div>
+                </div>
+                <div class="stat-card fade-up s4">
+                    <div class="stat-icon amber">
+                        <i data-lucide="trending-up" style="width:22px;height:22px;"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" id="avgAttendance">-</div>
+                        <div class="stat-label">Avg Attendance</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Units List -->
+            <div style="margin-bottom:2rem;">
+                <h2 style="font-family:var(--font-display);font-size:1.125rem;font-weight:600;margin-bottom:0.5rem;">My Units</h2>
+                <p style="color:var(--text-muted);font-size:14px;">Manage attendance for each unit independently</p>
+            </div>
+
+            <div id="unitsContainer" class="grid grid-3" style="margin-bottom:3rem;">
+                <div class="empty-state fade-up">
+                    <i data-lucide="book-open" class="empty-state-icon"></i>
+                    <p class="empty-state-title">No units assigned</p>
+                    <p class="empty-state-text">Contact admin to be assigned to units</p>
+                </div>
+            </div>
+
+            <!-- At-Risk Students Section -->
+            <div style="margin-bottom:1rem;">
+                <h2 style="font-family:var(--font-display);font-size:1.125rem;font-weight:600;display:flex;align-items:center;gap:8px;">
+                    <i data-lucide="alert-triangle" style="width:20px;height:20px;color:var(--amber);"></i>
+                    Consecutive Absence Alert
+                </h2>
+                <p style="color:var(--text-muted);font-size:14px;">Students who have missed 3+ sessions in a row</p>
+            </div>
+
+            <div id="atRiskContainer">
+                <div class="card" style="padding:2rem;text-align:center;">
+                    <i data-lucide="check-circle" style="width:48px;height:48px;color:var(--teal);margin:0 auto 1rem;"></i>
+                    <p style="color:var(--text-secondary);">All students are attending regularly</p>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Profile Edit Modal -->
+<div id="profileEditModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
+    <div style="background:white;width:90%;max-width:480px;padding:24px;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.15);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+            <h3 style="margin:0;font-size:18px;font-weight:600;">Edit Profile</h3>
+            <button onclick="closeProfileModal()" style="background:none;border:none;font-size:24px;cursor:pointer;padding:0;">&times;</button>
+        </div>
+        <form id="profileForm">
+            <div style="margin-bottom:16px;">
+                <label style="display:block;margin-bottom:8px;font-weight:500;">Full Name</label>
+                <input type="text" id="profileFullName" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;" required>
+            </div>
+            <div style="margin-bottom:16px;">
+                <label style="display:block;margin-bottom:8px;font-weight:500;">Email</label>
+                <input type="email" id="profileEmail" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;" required>
+            </div>
+            <div style="margin-bottom:16px;">
+                <label style="display:block;margin-bottom:8px;font-weight:500;">Staff ID</label>
+                <input type="text" id="profileStaffId" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;" required>
+            </div>
+            <div style="margin-bottom:16px;">
+                <label style="display:block;margin-bottom:8px;font-weight:500;">Department</label>
+                <input type="text" id="profileDepartment" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;">
+            </div>
+            <div style="margin-bottom:16px;">
+                <label style="display:block;margin-bottom:8px;font-weight:500;">New Password (leave blank to keep current)</label>
+                <input type="password" id="profilePassword" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;" placeholder="Optional">
+            </div>
+            <div style="display:flex;gap:16px;margin-top:24px;">
+                <button type="button" onclick="closeProfileModal()" style="flex:1;padding:10px;background:#f5f5f5;border:none;border-radius:4px;cursor:pointer;">Cancel</button>
+                <button type="submit" style="flex:1;padding:10px;background:#00C9B1;color:white;border:none;border-radius:4px;cursor:pointer;">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Start Session Modal -->
+<div id="startSessionModal" class="modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
+    <div class="card" style="width:90%;max-width:420px;margin:auto;animation:scaleIn 0.3s ease;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;">
+            <h3 style="font-family:var(--font-display);font-size:1.125rem;font-weight:600;">Start Attendance Session</h3>
+            <button onclick="closeStartModal()" class="btn-icon" style="width:32px;height:32px;">
+                <i data-lucide="x" style="width:18px;height:18px;"></i>
+            </button>
+        </div>
+        <p style="color:var(--text-muted);font-size:14px;margin-bottom:1.5rem;">
+            Starting session for <strong id="modalUnitName">-</strong>
+        </p>
+        <div style="display:flex;gap:12px;">
+            <button onclick="closeStartModal()" class="btn btn-outline" style="flex:1;">Cancel</button>
+            <button onclick="confirmStartSession()" class="btn btn-primary" style="flex:1;">
+                <i data-lucide="play" style="width:16px;height:16px;"></i> Start Session
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Notify Student Modal -->
+<div id="notifyModal" class="modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
+    <div class="card" style="width:90%;max-width:500px;margin:auto;animation:scaleIn 0.3s ease;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;">
+            <h3 style="font-family:var(--font-display);font-size:1.125rem;font-weight:600;">Notify Student</h3>
+            <button onclick="closeNotifyModal()" class="btn-icon" style="width:32px;height:32px;">
+                <i data-lucide="x" style="width:18px;height:18px;"></i>
+            </button>
+        </div>
+        <p style="color:var(--text-muted);font-size:14px;margin-bottom:1rem;">
+            Send absence warning to <strong id="notifyStudentName">-</strong>
+        </p>
+        <textarea id="notifyMessage" rows="4" style="width:100%;padding:12px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:14px;resize:vertical;margin-bottom:1.5rem;" placeholder="Enter your message..."></textarea>
+        <div style="display:flex;gap:12px;">
+            <button onclick="closeNotifyModal()" class="btn btn-outline" style="flex:1;">Cancel</button>
+            <button onclick="sendNotification()" class="btn btn-primary" style="flex:1;">
+                <i data-lucide="send" style="width:16px;height:16px;"></i> Send
+            </button>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/session.js') }}?v=2"></script>
+<script>
+let selectedUnitId = null;
+let selectedStudentId = null;
+let selectedUnitForNotify = null;
+let currentUser = null;
+
+// Load user data
+async function loadUserData() {
+    console.log('Loading user data...');
+    try {
+        const response = await API.get('/auth/me');
+        console.log('User data response:', response);
+        currentUser = response.user;
+        
+        // Update sidebar
+        const initials = currentUser.full_name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+        document.getElementById('sidebarAvatar').textContent = initials;
+        document.getElementById('sidebarUserName').textContent = currentUser.full_name;
+        
+        // Update topbar
+        document.getElementById('topbarStaffId').textContent = currentUser.staff_id || currentUser.email;
+    } catch (error) {
+        console.error('Failed to load user:', error);
+        showToast('Failed to load user data: ' + error.message, 'error');
+    }
+}
+
+// Load dashboard data
+async function loadDashboard() {
+    try {
+        console.log('Loading dashboard...');
+        
+        // Load stats
+        const statsResponse = await API.get('/lecturer/stats');
+        console.log('Stats response:', statsResponse);
+        const stats = statsResponse.stats;
+        document.getElementById('totalUnits').textContent = stats.total_units;
+        document.getElementById('sessionsWeek').textContent = stats.sessions_this_week;
+        document.getElementById('studentsToday').textContent = stats.students_today;
+        document.getElementById('avgAttendance').textContent = stats.average_attendance + '%';
+        
+        // Load units
+        const response = await API.get('/lecturer/units');
+        console.log('Units response:', response);
+        const units = response.units || [];
+        console.log('Units array:', units);
+        
+        // Render units with stats
+        const container = document.getElementById('unitsContainer');
+        if (units.length > 0) {
+            container.innerHTML = units.map((unit, index) => {
+                const avgPct = unit.avg_attendance_pct || 0;
+                const pctColor = avgPct >= 75 ? 'var(--teal)' : avgPct >= 60 ? '#f59e0b' : '#ef4444';
+                
+                if (unit.has_active_session) {
+                    return `
+                        <div class="card unit-card fade-up s${index + 1}" style="border-left:4px solid #f59e0b;">
+                            <div style="margin-bottom:0.5rem;display:flex;align-items:center;justify-content:space-between;">
+                                <span class="mono" style="font-size:11px;color:var(--teal);font-weight:600;">${unit.unit_code}</span>
+                                <span style="font-size:11px;background:#f59e0b;color:white;padding:2px 8px;border-radius:12px;font-weight:600;">ACTIVE</span>
+                            </div>
+                            <h3 style="font-size:15px;margin-bottom:0.75rem;font-weight:600;">${unit.unit_name}</h3>
+                            <div style="display:flex;align-items:center;gap:8px;margin-bottom:0.5rem;font-size:13px;color:var(--text-muted);">
+                                <i data-lucide="users" style="width:14px;height:14px;"></i>
+                                ${unit.enrolled_count} enrolled
+                            </div>
+                            <div style="display:flex;align-items:center;gap:8px;margin-bottom:1rem;font-size:13px;color:var(--text-muted);">
+                                <i data-lucide="trending-up" style="width:14px;height:14px;"></i>
+                                <span style="color:${pctColor};font-weight:600;">${avgPct}%</span> avg attendance
+                            </div>
+                            <a href="/lecturer/sessions/${unit.active_session_id}" class="btn btn-outline btn-block btn-sm" style="border-color:#f59e0b;color:#f59e0b;">
+                                <i data-lucide="eye" style="width:14px;height:14px;"></i>
+                                View Active Session
+                            </a>
+                            <button onclick="cancelSession(${unit.active_session_id})" class="btn btn-danger btn-block btn-sm" style="margin-top:8px;">
+                                <i data-lucide="x-circle" style="width:14px;height:14px;"></i>
+                                Cancel Session
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    return `
+                        <div class="card unit-card fade-up s${index + 1}">
+                            <div style="margin-bottom:0.5rem;">
+                                <span class="mono" style="font-size:11px;color:var(--teal);font-weight:600;">${unit.unit_code}</span>
+                            </div>
+                            <h3 style="font-size:15px;margin-bottom:0.75rem;font-weight:600;">${unit.unit_name}</h3>
+                            <div style="display:flex;align-items:center;gap:8px;margin-bottom:0.5rem;font-size:13px;color:var(--text-muted);">
+                                <i data-lucide="users" style="width:14px;height:14px;"></i>
+                                ${unit.enrolled_count} enrolled
+                            </div>
+                            <div style="display:flex;align-items:center;gap:8px;margin-bottom:1rem;font-size:13px;color:var(--text-muted);">
+                                <i data-lucide="trending-up" style="width:14px;height:14px;"></i>
+                                <span style="color:${pctColor};font-weight:600;">${avgPct}%</span> avg attendance
+                            </div>
+                            <button onclick="startSession(${unit.unit_id}, '${unit.unit_name}')" 
+                                    class="btn btn-primary btn-block btn-sm">
+                                <i data-lucide="play" style="width:14px;height:14px;"></i>
+                                Start Session
+                            </button>
+                        </div>
+                    `;
+                }
+            }).join('');
+        }
+        
+        // Load at-risk students
+        loadAtRiskStudents();
+        
+        lucide.createIcons();
+    } catch (error) {
+        console.error('Failed to load dashboard:', error);
+        showToast('Failed to load dashboard data', 'error');
+    }
+}
+
+async function loadAtRiskStudents() {
+    try {
+        const response = await API.get('/lecturer/at-risk');
+        const atRiskStudents = response.at_risk_students || [];
+        const container = document.getElementById('atRiskContainer');
+        
+        if (atRiskStudents.length > 0) {
+            container.innerHTML = `
+                <div class="card" style="padding:0;overflow:hidden;">
+                    <table style="width:100%;border-collapse:collapse;">
+                        <thead>
+                            <tr style="background:var(--navy-light);">
+                                <th style="padding:12px 16px;text-align:left;font-size:12px;color:var(--text-muted);">Student</th>
+                                <th style="padding:12px 16px;text-align:left;font-size:12px;color:var(--text-muted);">Unit</th>
+                                <th style="padding:12px 16px;text-align:left;font-size:12px;color:var(--text-muted);">Consecutive Misses</th>
+                                <th style="padding:12px 16px;text-align:left;font-size:12px;color:var(--text-muted);">Last Attended</th>
+                                <th style="padding:12px 16px;text-align:left;font-size:12px;color:var(--text-muted);">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${atRiskStudents.map(student => {
+                                const missColor = student.consecutive_misses >= 5 ? '#ef4444' : '#f59e0b';
+                                const initials = student.student_name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+                                return `
+                                    <tr style="border-bottom:1px solid var(--border);">
+                                        <td style="padding:12px 16px;">
+                                            <div style="display:flex;align-items:center;gap:12px;">
+                                                <div style="width:32px;height:32px;background:${missColor};color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;">${initials}</div>
+                                                <div>
+                                                    <div style="font-weight:500;font-size:14px;">${student.student_name}</div>
+                                                    <div style="font-size:12px;color:var(--text-muted);">${student.reg_number}</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td style="padding:12px 16px;">
+                                            <span class="mono" style="font-size:12px;color:var(--teal);">${student.unit_code}</span>
+                                        </td>
+                                        <td style="padding:12px 16px;">
+                                            <span style="background:${missColor};color:white;padding:4px 8px;border-radius:4px;font-size:12px;font-weight:600;">${student.consecutive_misses} in a row</span>
+                                        </td>
+                                        <td style="padding:12px 16px;font-size:13px;color:${student.last_attended === 'Never attended' ? '#ef4444' : 'var(--text-secondary)'};">${student.last_attended}</td>
+                                        <td style="padding:12px 16px;">
+                                            <button onclick="notifyStudent(${student.student_id}, ${student.unit_id}, '${student.student_name}')" class="btn btn-outline btn-sm">
+                                                <i data-lucide="bell" style="width:14px;height:14px;"></i> Notify
+                                            </button>
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Failed to load at-risk students:', error);
+    }
+}
+
+// Start session modal
+function startSession(unitId, unitName) {
+    selectedUnitId = unitId;
+    document.getElementById('modalUnitName').textContent = unitName;
+    document.getElementById('startSessionModal').style.display = 'flex';
+}
+
+// Notify student functions
+function notifyStudent(studentId, unitId, studentName) {
+    selectedStudentId = studentId;
+    selectedUnitForNotify = unitId;
+    document.getElementById('notifyStudentName').textContent = studentName;
+    document.getElementById('notifyMessage').value = `Dear ${studentName}, you have missed consecutive sessions. Please attend the next class or contact me. - ${currentUser.full_name}`;
+    document.getElementById('notifyModal').style.display = 'flex';
+}
+
+function closeNotifyModal() {
+    document.getElementById('notifyModal').style.display = 'none';
+    selectedStudentId = null;
+    selectedUnitForNotify = null;
+}
+
+async function sendNotification() {
+    if (!selectedStudentId || !selectedUnitForNotify) return;
+    
+    const message = document.getElementById('notifyMessage').value.trim();
+    if (!message || message.length < 10) {
+        showToast('Message must be at least 10 characters', 'error');
+        return;
+    }
+    
+    try {
+        const response = await API.post(`/lecturer/notify/${selectedStudentId}`, { unit_id: selectedUnitForNotify, message });
+        if (response.success) {
+            showToast('Notification sent successfully', 'success');
+            closeNotifyModal();
+        } else {
+            showToast(response.error || 'Failed to send notification', 'error');
+        }
+    } catch (error) {
+        showToast('Network error. Please try again.', 'error');
+    }
+}
+
+function openStartModal() {
+    document.getElementById('startSessionModal').style.display = 'flex';
+}
+
+function closeStartModal() {
+    document.getElementById('startSessionModal').style.display = 'none';
+}
+
+document.getElementById('startSessionModal').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeStartModal();
+});
+
+document.getElementById('notifyModal').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeNotifyModal();
+});
+
+async function confirmStartSession() {
+    if (!selectedUnitId) return;
+    
+    try {
+        const response = await API.post('/lecturer/sessions/start', { unit_id: selectedUnitId });
+        if (response.success) {
+            window.location.href = `/lecturer/sessions/${response.session.session_id}`;
+        } else {
+            showToast(response.error || 'Failed to start session', 'error');
+        }
+    } catch (error) {
+        showToast('Network error. Please try again.', 'error');
+    }
+}
+
+// Show profile edit modal
+function showProfileEdit() {
+    if (!currentUser) {
+        showToast('User data not loaded', 'error');
+        return;
+    }
+    document.getElementById('profileFullName').value = currentUser.full_name;
+    document.getElementById('profileEmail').value = currentUser.email;
+    document.getElementById('profileStaffId').value = currentUser.staff_id || '';
+    document.getElementById('profileDepartment').value = currentUser.department || '';
+    document.getElementById('profilePassword').value = '';
+    document.getElementById('profileEditModal').style.display = 'flex';
+}
+
+// Close profile modal
+function closeProfileModal() {
+    document.getElementById('profileEditModal').style.display = 'none';
+}
+
+// Cancel session
+async function cancelSession(sessionId) {
+    try {
+        const response = await API.post(`/lecturer/sessions/${sessionId}/close`, {});
+        if (response.success) {
+            showToast('Session cancelled successfully', 'success');
+            loadDashboard();
+        } else {
+            showToast(response.error || 'Failed to cancel session', 'error');
+        }
+    } catch (error) {
+        showToast('Network error. Please try again.', 'error');
+    }
+}
+
+// Handle profile form submission
+document.getElementById('profileForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = {
+        full_name: document.getElementById('profileFullName').value,
+        email: document.getElementById('profileEmail').value,
+        staff_id: document.getElementById('profileStaffId').value,
+        department: document.getElementById('profileDepartment').value
+    };
+    const password = document.getElementById('profilePassword').value;
+    if (password) {
+        data.password = password;
+    }
+    
+    try {
+        await API.put('/lecturer/profile', data);
+        showToast('Profile updated successfully', 'success');
+        closeProfileModal();
+        loadUserData(); // Reload user data to reflect changes
+    } catch (error) {
+        showToast(error.message || 'Failed to update profile', 'error');
+    }
+});
+
+// Close modal on backdrop click
+document.getElementById('startSessionModal').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeStartModal();
+});
+
+document.getElementById('notifyModal').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeNotifyModal();
+});
+
+async function handleLogout(e) {
+    e.preventDefault();
+    try {
+        await API.post('/auth/logout', {});
+    } catch (error) {
+        console.error('Logout error:', error);
+    } finally {
+        // Clear any stored tokens
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        window.location.href = '/login';
+    }
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', () => {
+    loadUserData();
+    loadDashboard();
+    lucide.createIcons();
+});
+</script>
+{% endblock %}

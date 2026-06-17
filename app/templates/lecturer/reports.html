@@ -1,0 +1,328 @@
+{% extends "base.html" %}
+
+{% block title %}Reports - AttendKU{% endblock %}
+
+{% block content %}
+<div class="app-shell">
+    <!-- Sidebar -->
+    <aside class="app-sidebar">
+        <div class="sidebar-logo">
+            <div class="sidebar-logo-mark">A</div>
+            <span class="sidebar-logo-text">Attend<span>KU</span></span>
+        </div>
+        
+        <div class="sidebar-user">
+            <div class="sidebar-avatar" id="sidebarAvatar"></div>
+            <div class="sidebar-user-info">
+                <div class="sidebar-user-name" id="sidebarUserName">Loading...</div>
+                <div class="sidebar-user-role">Lecturer</div>
+            </div>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <a class="sidebar-nav-item" href="/dashboard">
+                <i data-lucide="layout-dashboard"></i>
+                <span class="sidebar-nav-label">Dashboard</span>
+            </a>
+            <a class="sidebar-nav-item active" href="/reports">
+                <i data-lucide="bar-chart-2"></i>
+                <span class="sidebar-nav-label">Reports</span>
+            </a>
+            <a class="sidebar-nav-item" href="#" onclick="handleLogout(event)">
+                <i data-lucide="log-out"></i>
+                <span class="sidebar-nav-label">Logout</span>
+            </a>
+        </nav>
+        
+        <button class="sidebar-collapse-btn" onclick="toggleSidebar()">
+            <i data-lucide="panel-left-close"></i>
+            <span>Collapse</span>
+        </button>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="app-main">
+        <!-- Topbar -->
+        <div class="app-topbar">
+            <h1 style="font-family:var(--font-display);font-size:1.25rem;font-weight:600;">Reports & Analytics</h1>
+        </div>
+
+        <!-- Content -->
+        <div class="app-content">
+            <!-- Analytics Overview -->
+            <div style="margin-bottom:2rem;">
+                <h2 style="font-family:var(--font-display);font-size:1.125rem;font-weight:600;margin-bottom:0.5rem;">Attendance Analytics</h2>
+                <p style="color:var(--text-muted);font-size:14px;">Track attendance trends across your units</p>
+            </div>
+
+            <!-- Analytics Stats -->
+            <div class="grid grid-4" style="margin-bottom:2rem;">
+                <div class="stat-card fade-up s1">
+                    <div class="stat-icon teal">
+                        <i data-lucide="percent" style="width:22px;height:22px;"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" id="overallAvg">-</div>
+                        <div class="stat-label">Overall Avg</div>
+                    </div>
+                </div>
+                <div class="stat-card fade-up s2">
+                    <div class="stat-icon blue">
+                        <i data-lucide="calendar" style="width:22px;height:22px;"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" id="totalSessions">-</div>
+                        <div class="stat-label">Total Sessions</div>
+                    </div>
+                </div>
+                <div class="stat-card fade-up s3">
+                    <div class="stat-icon green">
+                        <i data-lucide="trending-up" style="width:22px;height:22px;"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" id="mostEngaged">-</div>
+                        <div class="stat-label">Most Engaged</div>
+                    </div>
+                </div>
+                <div class="stat-card fade-up s4">
+                    <div class="stat-icon amber">
+                        <i data-lucide="alert-circle" style="width:22px;height:22px;"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" id="mostAtRisk">-</div>
+                        <div class="stat-label">At Risk Unit</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Unit Analytics Cards -->
+            <div id="unitAnalyticsContainer" class="grid grid-2" style="margin-bottom:3rem;">
+                <div class="card" style="grid-column:span 2;text-align:center;padding:3rem;">
+                    <i data-lucide="loader-2" class="spin" style="width:48px;height:48px;color:var(--teal);margin:0 auto 1rem;"></i>
+                    <p style="color:var(--text-muted);">Loading analytics...</p>
+                </div>
+            </div>
+
+            <!-- Export Section -->
+            <div style="margin-bottom:2rem;">
+                <h2 style="font-family:var(--font-display);font-size:1.125rem;font-weight:600;margin-bottom:0.5rem;">Export Reports</h2>
+                <p style="color:var(--text-muted);font-size:14px;">Download CSV reports for sessions and units</p>
+            </div>
+
+            <div class="grid grid-2">
+                <div class="card fade-up s1">
+                    <div style="margin-bottom:1rem;">
+                        <i data-lucide="calendar" style="width:32px;height:32px;color:var(--teal);"></i>
+                    </div>
+                    <h3 style="font-size:1rem;margin-bottom:0.5rem;">Session Reports</h3>
+                    <p style="color:var(--text-muted);font-size:13px;margin-bottom:1rem;">Export attendance for specific sessions</p>
+                    <select id="session-select" class="form-select" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;margin-bottom:0.75rem;">
+                        <option value="">Select a session</option>
+                    </select>
+                    <button id="export-session" class="btn btn-primary btn-block btn-sm" disabled>
+                        Export CSV
+                    </button>
+                </div>
+
+                <div class="card fade-up s2">
+                    <div style="margin-bottom:1rem;">
+                        <i data-lucide="file-text" style="width:32px;height:32px;color:var(--teal);"></i>
+                    </div>
+                    <h3 style="font-size:1rem;margin-bottom:0.5rem;">Unit Reports</h3>
+                    <p style="color:var(--text-muted);font-size:13px;margin-bottom:1rem;">Export overall unit attendance</p>
+                    <select id="unit-select" class="form-select" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;margin-bottom:0.75rem;">
+                        <option value="">Select a unit</option>
+                    </select>
+                    <button id="export-unit" class="btn btn-primary btn-block btn-sm" disabled>
+                        Export CSV
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script src="{{ url_for('static', filename='js/session.js') }}"></script>
+<script>
+let currentUser = null;
+
+// Load user data
+async function loadUserData() {
+    try {
+        const response = await API.get('/auth/me');
+        currentUser = response.user;
+        
+        const initials = currentUser.full_name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+        document.getElementById('sidebarAvatar').textContent = initials;
+        document.getElementById('sidebarUserName').textContent = currentUser.full_name;
+    } catch (error) {
+        console.error('Failed to load user:', error);
+    }
+}
+
+// Load analytics
+async function loadAnalytics() {
+    try {
+        const response = await API.get('/lecturer/analytics');
+        if (response.success) {
+            const analytics = response.analytics;
+            
+            // Update stats
+            document.getElementById('overallAvg').textContent = analytics.overall_avg + '%';
+            document.getElementById('totalSessions').textContent = analytics.total_sessions_this_semester;
+            document.getElementById('mostEngaged').textContent = analytics.most_engaged_unit || '-';
+            document.getElementById('mostAtRisk').textContent = analytics.most_at_risk_unit || '-';
+            
+            // Render unit analytics cards
+            const container = document.getElementById('unitAnalyticsContainer');
+            if (analytics.units.length > 0) {
+                container.innerHTML = analytics.units.map((unit, index) => {
+                    const trendIcon = unit.trend === 'improving' ? 'trending-up' : unit.trend === 'declining' ? 'trending-down' : 'minus';
+                    const trendColor = unit.trend === 'improving' ? 'var(--success)' : unit.trend === 'declining' ? 'var(--danger)' : 'var(--text-muted)';
+                    
+                    // Create simple bar chart visualization
+                    const maxPct = Math.max(...unit.sessions_over_time.map(s => s.pct), 100);
+                    const bars = unit.sessions_over_time.map(s => {
+                        const height = Math.max((s.pct / maxPct) * 100, 5);
+                        const color = s.pct >= 75 ? 'var(--teal)' : s.pct >= 60 ? '#f59e0b' : '#ef4444';
+                        return `<div style="height:${height}px;background:${color};border-radius:2px;min-width:12px;flex:1;" title="${s.date}: ${s.pct}%"></div>`;
+                    }).join('');
+                    
+                    return `
+                        <div class="card fade-up s${index + 1}">
+                            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+                                <div>
+                                    <span class="mono" style="font-size:11px;color:var(--teal);font-weight:600;">${unit.unit_code}</span>
+                                    <h3 style="font-size:1rem;margin-top:0.25rem;">${unit.unit_name}</h3>
+                                </div>
+                                <div style="display:flex;align-items:center;gap:4px;color:${trendColor};font-size:13px;">
+                                    <i data-lucide="${trendIcon}" style="width:16px;height:16px;"></i>
+                                    <span style="text-transform:capitalize;">${unit.trend}</span>
+                                </div>
+                            </div>
+                            
+                            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1rem;">
+                                <div style="text-align:center;">
+                                    <div style="font-size:20px;font-weight:700;">${unit.total_sessions}</div>
+                                    <div style="font-size:11px;color:var(--text-muted);">Sessions</div>
+                                </div>
+                                <div style="text-align:center;">
+                                    <div style="font-size:20px;font-weight:700;color:var(--teal);">${unit.avg_attendance_pct}%</div>
+                                    <div style="font-size:11px;color:var(--text-muted);">Avg</div>
+                                </div>
+                                <div style="text-align:center;">
+                                    <div style="font-size:20px;font-weight:700;color:var(--success);">${unit.best_session_pct}%</div>
+                                    <div style="font-size:11px;color:var(--text-muted);">Best</div>
+                                </div>
+                            </div>
+                            
+                            <div style="margin-bottom:0.5rem;font-size:12px;color:var(--text-muted);">Attendance Trend (Last 10 sessions)</div>
+                            <div style="display:flex;align-items:flex-end;gap:4px;height:60px;padding:8px;background:var(--navy-light);border-radius:8px;">
+                                ${bars}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                lucide.createIcons();
+            }
+        }
+    } catch (error) {
+        console.error('Failed to load analytics:', error);
+        document.getElementById('unitAnalyticsContainer').innerHTML = `
+            <div class="card" style="grid-column:span 2;text-align:center;padding:2rem;">
+                <p style="color:var(--text-muted);">Failed to load analytics data</p>
+            </div>
+        `;
+    }
+}
+
+// Load units for export
+async function loadExportUnits() {
+    try {
+        const response = await API.get('/lecturer/units');
+        if (response.success) {
+            const select = document.getElementById('unit-select');
+            response.units.forEach(unit => {
+                const option = document.createElement('option');
+                option.value = unit.unit_id;
+                option.textContent = `${unit.unit_code} - ${unit.unit_name}`;
+                select.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('Failed to load units:', error);
+    }
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadUserData();
+    await loadAnalytics();
+    await loadExportUnits();
+    
+    const sessionSelect = document.getElementById('session-select');
+    const unitSelect = document.getElementById('unit-select');
+    const exportSessionBtn = document.getElementById('export-session');
+    const exportUnitBtn = document.getElementById('export-unit');
+
+    sessionSelect.addEventListener('change', function() {
+        exportSessionBtn.disabled = !this.value;
+    });
+
+    unitSelect.addEventListener('change', function() {
+        exportUnitBtn.disabled = !this.value;
+    });
+
+    exportSessionBtn.addEventListener('click', async function() {
+        const sessionId = sessionSelect.value;
+        if (!sessionId) return;
+        
+        try {
+            const response = await API.get(`/units/session/${sessionId}/export`);
+            const blob = new Blob([response], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `session_${sessionId}_attendance.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+            showToast('Session report exported successfully', 'success');
+        } catch (error) {
+            showToast('Failed to export session report', 'error');
+        }
+    });
+
+    exportUnitBtn.addEventListener('click', async function() {
+        const unitId = unitSelect.value;
+        if (!unitId) return;
+        
+        try {
+            const response = await API.get(`/units/${unitId}/export`);
+            const blob = new Blob([response], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `unit_${unitId}_attendance.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+            showToast('Unit report exported successfully', 'success');
+        } catch (error) {
+            showToast('Failed to export unit report', 'error');
+        }
+    });
+
+    lucide.createIcons();
+});
+
+async function handleLogout(e) {
+    e.preventDefault();
+    try {
+        await API.post('/auth/logout', {});
+        window.location.href = '/login';
+    } catch (error) {
+        console.error('Logout error:', error);
+        showToast('Logout failed. Please try again.', 'error');
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,208 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                                                                            ║
+║              DIGITAL ATTENDANCE SYSTEM - QUICK REFERENCE CARD              ║
+║                                                                            ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+┌─ DATABASE CREDENTIALS ─────────────────────────────────────────────────────┐
+│                                                                            │
+│  Host: localhost                                                           │
+│  Port: 3306                                                                │
+│  Database: attendance_db                                                   │
+│  User: root                                                                │
+│  Password: Root@1234                                                       │
+│                                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
+
+┌─ TEST ACCOUNTS ───────────────────────────────────────────────────────────┐
+│                                                                            │
+│  STUDENT:                                                                  │
+│    Email: alice@example.com                                               │
+│    Password: TestPassword123                                              │
+│                                                                            │
+│  LECTURER:                                                                 │
+│    Email: sarah@example.com                                               │
+│    Password: TestPassword123                                              │
+│                                                                            │
+│  ADMIN:                                                                    │
+│    Email: admin@example.com                                               │
+│    Password: TestPassword123                                              │
+│                                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
+
+┌─ STARTUP COMMANDS ────────────────────────────────────────────────────────┐
+│                                                                            │
+│  1. Navigate to project:                                                   │
+│     cd /home/gituya/CascadeProjects/digital-attendance                    │
+│                                                                            │
+│  2. Activate virtual environment:                                          │
+│     source venv/bin/activate                                              │
+│                                                                            │
+│  3. Start application:                                                     │
+│     python3 run.py                                                        │
+│                                                                            │
+│  4. Open browser:                                                          │
+│     http://localhost:5000                                                 │
+│                                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
+
+┌─ USEFUL COMMANDS ─────────────────────────────────────────────────────────┐
+│                                                                            │
+│  Check MySQL status:                                                       │
+│    sudo service mysql status                                              │
+│                                                                            │
+│  Start MySQL:                                                              │
+│    sudo service mysql start                                               │
+│                                                                            │
+│  Connect to database:                                                      │
+│    mysql -u root -pRoot@1234 attendance_db                                │
+│                                                                            │
+│  View all users:                                                           │
+│    mysql -u root -pRoot@1234 -e "USE attendance_db; SELECT * FROM users;" │
+│                                                                            │
+│  View all units:                                                           │
+│    mysql -u root -pRoot@1234 -e "USE attendance_db; SELECT * FROM units;" │
+│                                                                            │
+│  Backup database:                                                          │
+│    mysqldump -u root -pRoot@1234 attendance_db > backup.sql               │
+│                                                                            │
+│  Run tests:                                                                │
+│    python3 test_database.py                                               │
+│                                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
+
+┌─ PROJECT STRUCTURE ───────────────────────────────────────────────────────┐
+│                                                                            │
+│  /home/gituya/CascadeProjects/digital-attendance/                         │
+│  ├── app/                    (Source code)                                │
+│  ├── migrations/             (Database schema)                            │
+│  ├── tests/                  (Test files)                                 │
+│  ├── venv/                   (Virtual environment)                        │
+│  ├── .env                    (Configuration)                              │
+│  ├── run.py                  (Entry point)                                │
+│  ├── test_database.py        (Database test script)                       │
+│  ├── requirements.txt        (Dependencies)                               │
+│  └── *.md                    (Documentation)                              │
+│                                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
+
+┌─ DOCUMENTATION FILES ─────────────────────────────────────────────────────┐
+│                                                                            │
+│  README.md                   - Full project documentation                 │
+│  QUICKSTART.md               - 5-minute setup guide                       │
+│  SETUP.md                    - Detailed setup instructions                │
+│  ARCHITECTURE.md             - System design                              │
+│  DATABASE_SETUP.md           - Database configuration                     │
+│  HTTPS_SETUP.md              - HTTPS/SSL setup                            │
+│  PROJECT_SUMMARY.md          - Project status                             │
+│  PROGRESS.md                 - Development roadmap                        │
+│  INDEX.md                    - Documentation index                        │
+│                                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
+
+┌─ API ENDPOINTS ───────────────────────────────────────────────────────────┐
+│                                                                            │
+│  Authentication:                                                           │
+│    POST   /api/auth/register                                              │
+│    POST   /api/auth/login                                                 │
+│    POST   /api/auth/logout                                                │
+│    GET    /api/auth/me                                                    │
+│                                                                            │
+│  Student:                                                                  │
+│    GET    /api/student/units                                              │
+│    GET    /api/student/attendance                                         │
+│    POST   /api/student/mark                                               │
+│    POST   /api/student/request                                            │
+│                                                                            │
+│  Lecturer:                                                                 │
+│    GET    /api/lecturer/units                                             │
+│    POST   /api/sessions/start                                             │
+│    GET    /api/sessions/:id/qr                                            │
+│    GET    /api/sessions/:id/live                                          │
+│    POST   /api/sessions/:id/close                                         │
+│    GET    /api/sessions/:id/export                                        │
+│                                                                            │
+│  Admin:                                                                    │
+│    GET    /api/admin/users                                                │
+│    POST   /api/admin/users                                                │
+│    PUT    /api/admin/users/:id                                            │
+│    DELETE /api/admin/users/:id                                            │
+│    GET    /api/admin/units                                                │
+│    POST   /api/admin/units                                                │
+│    GET    /api/admin/requests                                             │
+│    PUT    /api/admin/requests/:id                                         │
+│    GET    /api/admin/reports/dashboard                                    │
+│    GET    /api/admin/logs                                                 │
+│                                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
+
+┌─ TROUBLESHOOTING ─────────────────────────────────────────────────────────┐
+│                                                                            │
+│  Issue: "Can't connect to MySQL"                                          │
+│  Fix: sudo service mysql start                                            │
+│                                                                            │
+│  Issue: "Module not found"                                                │
+│  Fix: source venv/bin/activate && pip install -r requirements.txt         │
+│                                                                            │
+│  Issue: "Port 5000 already in use"                                        │
+│  Fix: lsof -i :5000 && kill -9 <PID>                                      │
+│                                                                            │
+│  Issue: "Camera access denied" (mobile)                                   │
+│  Fix: Use HTTPS (see HTTPS_SETUP.md)                                      │
+│                                                                            │
+│  Issue: "Database doesn't exist"                                          │
+│  Fix: mysql -u root -pRoot@1234 < migrations/schema.sql                   │
+│                                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
+
+┌─ IMPORTANT NOTES ─────────────────────────────────────────────────────────┐
+│                                                                            │
+│  ⚠️  HTTPS is REQUIRED for mobile camera access                           │
+│  ⚠️  Change all passwords before production                               │
+│  ⚠️  Keep .env file secure (never commit to git)                          │
+│                                                                            │
+│  ✅ All passwords are bcrypt hashed (12 rounds)                           │
+│  ✅ Database has foreign key constraints                                  │
+│  ✅ All actions are audit logged                                          │
+│  ✅ Rate limiting enabled on login                                        │
+│                                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
+
+┌─ QUICK WORKFLOW TEST ─────────────────────────────────────────────────────┐
+│                                                                            │
+│  1. Start application:                                                     │
+│     python3 run.py                                                        │
+│                                                                            │
+│  2. Login as student:                                                      │
+│     alice@example.com / TestPassword123                                   │
+│                                                                            │
+│  3. View enrolled units (none yet)                                        │
+│                                                                            │
+│  4. Logout and login as admin:                                            │
+│     admin@example.com / TestPassword123                                   │
+│                                                                            │
+│  5. Enroll student in unit                                                │
+│                                                                            │
+│  6. Assign lecturer to unit                                               │
+│                                                                            │
+│  7. Login as lecturer:                                                     │
+│     sarah@example.com / TestPassword123                                   │
+│                                                                            │
+│  8. Start attendance session                                              │
+│                                                                            │
+│  9. Login as student and scan QR (requires HTTPS)                         │
+│                                                                            │
+│  10. View attendance records                                              │
+│                                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║                                                                            ║
+║  Status: ✅ SYSTEM READY FOR TESTING                                      ║
+║  Database: ✅ CONFIGURED & TESTED                                         ║
+║  Users: ✅ CREATED (5 total)                                              ║
+║  Units: ✅ CREATED (3 total)                                              ║
+║                                                                            ║
+║  Next: python3 run.py → http://localhost:5000                             ║
+║                                                                            ║
+╚════════════════════════════════════════════════════════════════════════════╝

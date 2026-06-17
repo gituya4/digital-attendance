@@ -1,0 +1,453 @@
+{% extends "base.html" %}
+
+{% block title %}Student Dashboard - AttendKU{% endblock %}
+
+{% block content %}
+<div class="app-shell">
+    <!-- Sidebar -->
+    <aside class="app-sidebar">
+        <div class="sidebar-logo">
+            <div class="sidebar-logo-mark">A</div>
+            <span class="sidebar-logo-text">Attend<span>KU</span></span>
+        </div>
+        
+        <div class="sidebar-user">
+            <div class="sidebar-avatar" id="sidebarAvatar"></div>
+            <div class="sidebar-user-info">
+                <div class="sidebar-user-name" id="sidebarUserName">Loading...</div>
+                <div class="sidebar-user-role">Student</div>
+            </div>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <a class="sidebar-nav-item active" href="/dashboard">
+                <i data-lucide="layout-dashboard"></i>
+                <span class="sidebar-nav-label">Dashboard</span>
+            </a>
+            <a class="sidebar-nav-item" href="#" onclick="openScanner(event)">
+                <i data-lucide="scan-line"></i>
+                <span class="sidebar-nav-label">Scan QR</span>
+            </a>
+            <a class="sidebar-nav-item" href="#" onclick="handleLogout(event)">
+                <i data-lucide="log-out"></i>
+                <span class="sidebar-nav-label">Logout</span>
+            </a>
+        </nav>
+        
+        <button class="sidebar-collapse-btn" onclick="toggleSidebar()">
+            <i data-lucide="panel-left-close"></i>
+            <span>Collapse</span>
+        </button>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="app-main">
+        <!-- Topbar -->
+        <div class="app-topbar">
+            <div style="display:flex;align-items:center;gap:12px;">
+                <button class="btn-icon" onclick="toggleSidebar()" style="display:none;" id="mobileMenuBtn">
+                    <i data-lucide="menu"></i>
+                </button>
+                <h1 style="font-family:var(--font-display);font-size:1.25rem;font-weight:600;">My Dashboard</h1>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+                <span style="font-size:14px;color:var(--text-secondary);" id="topbarRegNumber">Loading...</span>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="app-content">
+            <!-- Stats Row -->
+            <div class="grid grid-4" style="margin-bottom:2rem;">
+                <div class="stat-card fade-up s1">
+                    <div class="stat-icon teal">
+                        <i data-lucide="book-open" style="width:22px;height:22px;"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" id="totalUnits">-</div>
+                        <div class="stat-label">Enrolled Units</div>
+                    </div>
+                </div>
+                <div class="stat-card fade-up s2">
+                    <div class="stat-icon green">
+                        <i data-lucide="check-circle" style="width:22px;height:22px;"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" id="avgAttendance">-</div>
+                        <div class="stat-label">Avg Attendance</div>
+                    </div>
+                </div>
+                <div class="stat-card fade-up s3">
+                    <div class="stat-icon amber">
+                        <i data-lucide="calendar" style="width:22px;height:22px;"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" id="sessionsAttended">-</div>
+                        <div class="stat-label">Sessions Attended</div>
+                    </div>
+                </div>
+                <div class="stat-card fade-up s4">
+                    <div class="stat-icon blue">
+                        <i data-lucide="trending-up" style="width:22px;height:22px;"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" id="currentStreak">-</div>
+                        <div class="stat-label">Current Streak</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notifications Section -->
+            <div style="margin-bottom:2rem;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+                    <h2 style="font-family:var(--font-display);font-size:1.125rem;font-weight:600;margin:0;">Notifications</h2>
+                    <span style="font-size:12px;color:var(--text-muted);" id="notificationCount"></span>
+                </div>
+                <div id="notificationsContainer" style="max-height:300px;overflow-y:auto;">
+                    <p style="color:var(--text-muted);font-size:14px;">Loading notifications...</p>
+                </div>
+            </div>
+
+            <!-- Units Grid -->
+            <div style="margin-bottom:1rem;">
+                <h2 style="font-family:var(--font-display);font-size:1.125rem;font-weight:600;margin-bottom:0.5rem;">My Units</h2>
+                <p style="color:var(--text-muted);font-size:14px;">Track your attendance across enrolled units</p>
+            </div>
+
+            <div id="unitsContainer" class="grid grid-3">
+                <!-- Units loaded via JS -->
+                <div class="empty-state fade-up">
+                    <i data-lucide="book-open" class="empty-state-icon"></i>
+                    <p class="empty-state-title">No units enrolled</p>
+                    <p class="empty-state-text">Contact your lecturer to be enrolled in a unit</p>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- QR Scanner Modal -->
+<div id="scannerModal" style="display:none;position:fixed;inset:0;background:var(--navy);z-index:1000;flex-direction:column;">
+    <!-- Header -->
+    <div style="display:flex;align-items:center;gap:12px;padding:1rem 1.25rem;border-bottom:1px solid rgba(255,255,255,0.1);">
+        <button onclick="closeScanner()" class="btn-icon" style="background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.2);color:white;">
+            <i data-lucide="arrow-left" style="width:18px;height:18px;"></i>
+        </button>
+        <span style="font-family:var(--font-display);font-size:17px;font-weight:600;color:white;">Scan Attendance QR</span>
+    </div>
+
+    <!-- HTTPS Warning -->
+    <div id="httpsWarning" style="display:none;padding:1rem 1.25rem;background:rgba(245,158,11,0.15);border-bottom:1px solid rgba(245,158,11,0.3);">
+        <div style="display:flex;align-items:center;gap:10px;">
+            <i data-lucide="alert-triangle" style="width:18px;height:18px;color:var(--warning);"></i>
+            <span style="font-size:13px;color:var(--warning);">Camera access requires HTTPS. Please use a secure connection.</span>
+        </div>
+    </div>
+
+    <!-- Camera viewfinder -->
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5rem;">
+        <div style="position:relative;width:min(320px,80vw);height:min(320px,80vw);border-radius:var(--radius-lg);overflow:hidden;background:#000;">
+            <video id="scanVideo" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover;"></video>
+
+            <!-- Reticle overlay -->
+            <div style="position:absolute;inset:0;pointer-events:none;">
+                <!-- Corner brackets -->
+                <div style="position:absolute;top:16px;left:16px;width:28px;height:28px;border-top:3px solid var(--teal);border-left:3px solid var(--teal);border-radius:3px 0 0 0;"></div>
+                <div style="position:absolute;top:16px;right:16px;width:28px;height:28px;border-top:3px solid var(--teal);border-right:3px solid var(--teal);border-radius:0 3px 0 0;"></div>
+                <div style="position:absolute;bottom:16px;left:16px;width:28px;height:28px;border-bottom:3px solid var(--teal);border-left:3px solid var(--teal);border-radius:0 0 0 3px;"></div>
+                <div style="position:absolute;bottom:16px;right:16px;width:28px;height:28px;border-bottom:3px solid var(--teal);border-right:3px solid var(--teal);border-radius:0 0 3px 0;"></div>
+                <!-- Sweep line -->
+                <div id="sweepLine" style="position:absolute;left:8%;width:84%;height:2px;background:var(--teal);box-shadow:0 0 8px var(--teal);animation:scanSweep 2.5s ease-in-out infinite;"></div>
+            </div>
+        </div>
+
+        <p style="font-size:13px;color:rgba(255,255,255,0.5);margin-top:1rem;text-align:center;">Point camera at the QR code on the board</p>
+
+        <!-- PIN input — 4 digit boxes -->
+        <div style="margin-top:1.5rem;text-align:center;">
+            <div style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.7);margin-bottom:12px;letter-spacing:0.05em;text-transform:uppercase;">Enter Session PIN</div>
+            <div style="display:flex;gap:10px;justify-content:center;" id="pinBoxes">
+                <input class="pin-box" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+                <input class="pin-box" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+                <input class="pin-box" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+                <input class="pin-box" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+            </div>
+        </div>
+
+        <!-- Submit -->
+        <button id="submitBtn" class="btn btn-primary btn-lg" style="margin-top:1.5rem;min-width:280px;" disabled>
+            Confirm Attendance
+        </button>
+    </div>
+</div>
+
+<!-- Success Overlay -->
+<div id="successOverlay" style="display:none;position:fixed;inset:0;background:var(--navy);z-index:1001;flex-direction:column;align-items:center;justify-content:center;">
+    <div style="width:80px;height:80px;border-radius:50%;background:var(--success-bg);display:flex;align-items:center;justify-content:center;animation:scaleIn 0.4s cubic-bezier(0.34,1.56,0.64,1);">
+        <i data-lucide="check" style="width:40px;height:40px;color:var(--success);stroke-width:3;"></i>
+    </div>
+    <div style="text-align:center;margin-top:1.5rem;">
+        <div style="font-family:var(--font-display);font-size:24px;font-weight:700;color:white;margin-bottom:8px;">Attendance Recorded!</div>
+        <div id="successUnitName" style="font-size:14px;color:rgba(255,255,255,0.6);"></div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/@zxing/library@latest"></script>
+<script src="{{ url_for('static', filename='js/scanner.js') }}"></script>
+<script>
+let scanner = null;
+
+function startScanner() {
+    scanner = new QRScanner('scanVideo', onQRCodeScanned);
+    scanner.start().catch(err => {
+        console.error('Scanner error:', err);
+        showToast('Could not access camera. Please allow camera permissions.', 'error');
+        closeScanner();
+    });
+}
+
+function stopScanner() {
+    if (scanner) {
+        scanner.stop();
+        scanner = null;
+    }
+}
+let currentUser = null;
+
+// Load user data
+async function loadUserData() {
+    try {
+        const response = await API.get('/auth/me');
+        currentUser = response.user;
+        
+        // Update sidebar
+        const initials = currentUser.full_name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+        document.getElementById('sidebarAvatar').textContent = initials;
+        document.getElementById('sidebarUserName').textContent = currentUser.full_name;
+        
+        // Update topbar
+        document.getElementById('topbarRegNumber').textContent = currentUser.registration_number || currentUser.staff_id;
+    } catch (error) {
+        console.error('Failed to load user:', error);
+        showToast('Failed to load user data', 'error');
+    }
+}
+
+// Load dashboard data
+async function loadDashboard() {
+    try {
+        const response = await API.get('/student/units');
+        
+        // Update stats from units data
+        const units = response.units || [];
+        document.getElementById('totalUnits').textContent = units.length;
+        
+        // Calculate avg attendance
+        const avgAtt = units.length > 0 
+            ? Math.round(units.reduce((sum, u) => sum + (u.attendance_percentage || 0), 0) / units.length)
+            : 0;
+        document.getElementById('avgAttendance').textContent = avgAtt + '%';
+        
+        // Render units
+        const container = document.getElementById('unitsContainer');
+        if (units.length > 0) {
+            container.innerHTML = units.map((unit, index) => {
+                const pct = unit.attendance_percentage || 0;
+                return `
+                <div class="card unit-card fade-up s${index + 1}">
+                    <div style="margin-bottom:0.5rem;">
+                        <span class="mono" style="font-size:11px;color:var(--teal);font-weight:600;">${unit.unit_code}</span>
+                    </div>
+                    <h3 style="font-size:15px;margin-bottom:1rem;font-weight:600;">${unit.unit_name}</h3>
+                    <div class="progress-track" style="margin-bottom:8px;">
+                        <div class="progress-fill ${pct >= 75 ? 'healthy' : pct >= 60 ? 'watch' : 'critical'}"
+                             style="--progress-value: ${pct}%;"></div>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <span style="font-family:var(--font-display);font-size:22px;font-weight:700;
+                            color:${pct >= 75 ? 'var(--success)' : pct >= 60 ? 'var(--warning)' : 'var(--danger)'};">
+                            ${pct}%
+                        </span>
+                        <span style="font-size:12px;color:var(--text-muted);">Attendance</span>
+                    </div>
+                    ${pct < 75 ? `
+                    <div style="margin-top:12px;padding:8px 12px;background:var(--warning-bg);border-radius:var(--radius-sm);font-size:12px;color:var(--warning);display:flex;align-items:center;gap:6px;">
+                        <i data-lucide="alert-triangle" style="width:14px;height:14px;"></i>
+                        Attendance below 75%
+                    </div>` : ''}
+                </div>
+            `}).join('');
+        }
+        lucide.createIcons();
+    } catch (error) {
+        console.error('Failed to load dashboard:', error);
+        showToast('Failed to load units', 'error');
+    }
+}
+
+// Load notifications
+async function loadNotifications() {
+    try {
+        const response = await API.get('/student/notifications');
+        const container = document.getElementById('notificationsContainer');
+        const countEl = document.getElementById('notificationCount');
+        
+        const notifications = response.notifications || [];
+        const unreadCount = notifications.filter(n => !n.is_read).length;
+        
+        countEl.textContent = unreadCount > 0 ? `${unreadCount} unread` : 'No unread';
+        
+        if (notifications.length > 0) {
+            container.innerHTML = notifications.map(n => `
+                <div class="card" style="padding:1rem;margin-bottom:0.75rem;${!n.is_read ? 'border-left:3px solid var(--teal);background:var(--teal-bg);' : ''}">
+                    <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:0.5rem;">
+                        <div style="font-weight:600;font-size:14px;">${n.from_name || 'System'}</div>
+                        <div style="font-size:12px;color:var(--text-muted);">${new Date(n.created_at).toLocaleString()}</div>
+                    </div>
+                    <div style="font-size:13px;color:var(--text-secondary);margin-bottom:0.5rem;">${n.message}</div>
+                    ${n.unit_code ? `<div style="font-size:12px;color:var(--teal);">${n.unit_code} - ${n.unit_name}</div>` : ''}
+                    ${!n.is_read ? `
+                    <button onclick="markAsRead(${n.notification_id})" style="margin-top:0.5rem;padding:0.4rem 0.8rem;font-size:12px;background:var(--teal);color:white;border:none;border-radius:4px;cursor:pointer;">Mark as read</button>
+                    ` : ''}
+                </div>
+            `).join('');
+        } else {
+            container.innerHTML = '<p style="color:var(--text-muted);font-size:14px;">No notifications</p>';
+        }
+    } catch (error) {
+        console.error('Failed to load notifications:', error);
+        document.getElementById('notificationsContainer').innerHTML = '<p style="color:var(--text-muted);font-size:14px;">Failed to load notifications</p>';
+    }
+}
+
+// Mark notification as read
+async function markAsRead(notificationId) {
+    try {
+        await API.put(`/student/notifications/${notificationId}/read`);
+        loadNotifications();
+    } catch (error) {
+        console.error('Failed to mark as read:', error);
+        showToast('Failed to mark as read', 'error');
+    }
+}
+
+// PIN input handling
+const boxes = document.querySelectorAll('.pin-box');
+let scannedPayload = null;
+
+boxes.forEach((box, i) => {
+    box.addEventListener('input', e => {
+        e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(-1);
+        if (e.target.value) {
+            e.target.classList.add('filled');
+            if (i < boxes.length - 1) boxes[i + 1].focus();
+        }
+        checkSubmitReady();
+    });
+    box.addEventListener('keydown', e => {
+        if (e.key === 'Backspace' && !e.target.value && i > 0) {
+            boxes[i - 1].value = '';
+            boxes[i - 1].classList.remove('filled');
+            boxes[i - 1].focus();
+        }
+    });
+});
+
+function checkSubmitReady() {
+    const pin = [...boxes].map(b => b.value).join('');
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = !(pin.length === 4 && scannedPayload);
+}
+
+function openScanner(e) {
+    e.preventDefault();
+    document.getElementById('scannerModal').style.display = 'flex';
+    
+    // Check if using HTTPS or localhost
+    const isSecure = window.location.protocol === 'https:' || window.location.hostname === 'localhost';
+    if (!isSecure) {
+        document.getElementById('httpsWarning').style.display = 'block';
+    } else {
+        document.getElementById('httpsWarning').style.display = 'none';
+        startScanner();
+    }
+}
+
+function closeScanner() {
+    document.getElementById('scannerModal').style.display = 'none';
+    stopScanner();
+    // Reset PIN boxes
+    boxes.forEach(b => { b.value = ''; b.classList.remove('filled'); });
+    scannedPayload = null;
+    document.getElementById('submitBtn').disabled = true;
+}
+
+async function handleLogout(e) {
+    e.preventDefault();
+    try {
+        await API.post('/auth/logout', {});
+        window.location.href = '/login';
+    } catch (error) {
+        console.error('Logout error:', error);
+        showToast('Logout failed. Please try again.', 'error');
+    }
+}
+
+// QR Scanner callbacks
+function onQRCodeScanned(payload) {
+    scannedPayload = payload;
+    checkSubmitReady();
+    showToast('QR Code scanned! Enter the PIN.', 'success');
+}
+
+// Submit attendance
+document.getElementById('submitBtn').addEventListener('click', async () => {
+    const pin = [...boxes].map(b => b.value).join('');
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i data-lucide="loader-circle" style="width:16px;height:16px;animation:spin 1s linear infinite;"></i> Verifying...';
+    lucide.createIcons();
+    
+    try {
+        const res = await API.post('/student/mark', {
+            token: scannedPayload,
+            pin: pin
+        });
+        
+        if (res.success) {
+            showSuccess('Attendance marked');
+        } else {
+            showError(res.error || 'Failed to mark attendance');
+        }
+    } catch (err) {
+        showError('Network error. Please try again.');
+    }
+});
+
+function showSuccess(unitName) {
+    document.getElementById('successUnitName').textContent = unitName;
+    document.getElementById('successOverlay').style.display = 'flex';
+    setTimeout(() => {
+        document.getElementById('successOverlay').style.display = 'none';
+        closeScanner();
+        loadDashboard(); // Refresh data
+    }, 2500);
+}
+
+function showError(message) {
+    boxes.forEach(b => { b.classList.add('error'); setTimeout(() => b.classList.remove('error'), 500); });
+    showToast(message, 'error');
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = false;
+    btn.innerHTML = 'Confirm Attendance';
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', () => {
+    loadUserData();
+    loadDashboard();
+    loadNotifications();
+    lucide.createIcons();
+});
+</script>
+{% endblock %}

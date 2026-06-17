@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Digital Attendance System{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div id="app">
+        {% block content %}{% endblock %}
+    </div>
+    
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    
+    <!-- Shared Utilities -->
+    <script>
+        // Sidebar toggle functionality
+        function toggleSidebar() {
+            const sidebar = document.querySelector('.app-sidebar');
+            const main = document.querySelector('.app-main');
+            if (window.innerWidth <= 768) {
+                sidebar.classList.toggle('mobile-open');
+                let overlay = document.querySelector('.sidebar-overlay');
+                if (!overlay) {
+                    overlay = document.createElement('div');
+                    overlay.className = 'sidebar-overlay';
+                    overlay.onclick = toggleSidebar;
+                    document.body.appendChild(overlay);
+                } else {
+                    overlay.remove();
+                }
+            } else {
+                sidebar.classList.toggle('collapsed');
+                main.classList.toggle('sidebar-collapsed');
+            }
+        }
+
+        // Toast notification system
+        function showToast(message, type = 'info', duration = 4000) {
+            const icons = {
+                success: 'check-circle',
+                error: 'x-circle',
+                warning: 'alert-triangle',
+                info: 'info'
+            };
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <i data-lucide="${icons[type]}" class="toast-icon"></i>
+                <span class="toast-message">${message}</span>
+                <button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:0;margin-left:8px;">
+                    <i data-lucide="x" style="width:14px;height:14px;"></i>
+                </button>`;
+            container.appendChild(toast);
+            lucide.createIcons();
+            setTimeout(() => toast.style.animation = 'slideInRight 0.3s ease reverse both', duration - 300);
+            setTimeout(() => toast.remove(), duration);
+        }
+
+        // Table avatars - auto-generate initials
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('[data-initials-for]').forEach(el => {
+                const name = el.getAttribute('data-initials-for');
+                const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+                el.textContent = initials;
+            });
+            lucide.createIcons();
+        });
+    </script>
+    
+    <script src="{{ url_for('static', filename='js/utils.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

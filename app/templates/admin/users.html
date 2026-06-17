@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+
+{% block title %}User Management - AttendKU{% endblock %}
+
+{% block content %}
+<div class="app-shell">
+    <aside class="app-sidebar">
+        <div class="sidebar-logo">
+            <div class="sidebar-logo-mark">A</div>
+            <span class="sidebar-logo-text">Attend<span>KU</span></span>
+        </div>
+        
+        <div class="sidebar-user">
+            <div class="sidebar-avatar" id="sidebarAvatar">A</div>
+            <div class="sidebar-user-info">
+                <div class="sidebar-user-name" id="sidebarUserName">Admin</div>
+                <div class="sidebar-user-role">Administrator</div>
+            </div>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <a class="sidebar-nav-item" href="/admin/dashboard">Dashboard</a>
+            <a class="sidebar-nav-item active" href="/admin/users">Users</a>
+            <a class="sidebar-nav-item" href="/admin/units">Units</a>
+        </nav>
+    </aside>
+
+    <main class="app-main">
+        <div class="app-topbar">
+            <h1 style="font-family:var(--font-display);font-size:1.25rem;font-weight:600;">User Management</h1>
+            <button class="btn btn-sm btn-outline" onclick="handleLogout(event)">Logout</button>
+        </div>
+
+        <div class="app-content">
+            <div style="padding:2rem;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem;">
+                    <h2 style="margin:0;">Manage Users</h2>
+                </div>
+
+                <!-- Create User Form -->
+                <div class="card" style="padding:1.5rem;margin-bottom:2rem;">
+                    <h3 style="margin:0 0 1rem 0;">Create New User</h3>
+                    <form id="createUserForm">
+                        <div class="grid grid-2">
+                            <div class="form-group">
+                                <label class="form-label">Full Name</label>
+                                <input type="text" id="fullName" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Email</label>
+                                <input type="email" id="email" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Password</label>
+                            <input type="password" id="password" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Role</label>
+                            <select id="role" class="form-control" required>
+                                <option value="student">Student</option>
+                                <option value="lecturer">Lecturer</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="regNumField">
+                            <label class="form-label">Registration Number</label>
+                            <input type="text" id="regNumber" class="form-control">
+                        </div>
+                        <div class="grid grid-2" id="lecturerFields" style="display:none;">
+                            <div class="form-group">
+                                <label class="form-label">Staff ID</label>
+                                <input type="text" id="staffId" class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Department</label>
+                                <input type="text" id="dept" class="form-control">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Create User</button>
+                    </form>
+                </div>
+
+                <div class="table-wrapper">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Department</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody">
+                            <tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-muted);">Loading users...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script>
+document.getElementById('role').addEventListener('change', function() {
+    const role = this.value;
+    document.getElementById('regNumField').style.display = role === 'student' ? 'block' : 'none';
+    document.getElementById('lecturerFields').style.display = role === 'lecturer' ? 'block' : 'none';
+});
+
+document.getElementById('createUserForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = {
+        full_name: document.getElementById('fullName').value,
+        email: document.getElementById('email').value,
+        password: document.getElementById('password').value,
+        role: document.getElementById('role').value
+    };
+    
+    if (data.role === 'student') {
+        data.registration_number = document.getElementById('regNumber').value;
+    } else if (data.role === 'lecturer') {
+        data.staff_id = document.getElementById('staffId').value;
+        data.department = document.getElementById('dept').value;
+    }
+    
+    try {
+        await API.post('/admin/users', data);
+        showToast('User created successfully', 'success');
+        document.getElementById('createUserForm').reset();
+        loadUsers();
+    } catch (error) {
+        showToast(error.message, 'error');
+    }
+});
+
+async function loadUsers() {
+    try {
+        const response = await API.get('/admin/users');
+        const tbody = document.getElementById('usersTableBody');
+        if (response.users && response.users.length > 0) {
+            tbody.innerHTML = response.users.map(u => `
+                <tr>
+                    <td>${u.full_name}</td>
+                    <td>${u.email}</td>
+                    <td><span class="badge badge-${u.role === 'student' ? 'info' : u.role === 'lecturer' ? 'teal' : 'neutral'}">${u.role}</span></td>
+                    <td>${u.department || '-'}</td>
+                    <td><span class="badge badge-${u.is_active ? 'success' : 'danger'}">${u.is_active ? 'Active' : 'Inactive'}</span></td>
+                </tr>
+            `).join('');
+        } else {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-muted);">No users found</td></tr>';
+        }
+    } catch (error) {
+        console.error('Error loading users:', error);
+        showToast('Failed to load users', 'error');
+    }
+}
+
+function showModal(modalId) {
+    document.getElementById(modalId).style.display = 'flex';
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).style.display = 'none';
+}
+
+async function handleLogout(e) {
+    e.preventDefault();
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    window.location.href = '/login';
+}
+
+document.addEventListener('DOMContentLoaded', loadUsers);
+</script>
+{% endblock %}
