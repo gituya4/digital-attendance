@@ -891,6 +891,192 @@ select.form-control { cursor: pointer; }
   input, select, textarea { font-size: 16px; min-height: 44px; }
 }
 
+/* Student Pages Mobile Optimization */
+@media (max-width: 768px) {
+  /* Scan Page */
+  .scan-page {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .scan-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 1rem;
+  }
+  
+  .scan-header {
+    text-align: center;
+    margin-bottom: 1rem;
+  }
+  
+  .scan-header h1 {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .scan-header .subtitle {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+  }
+  
+  .camera-wrapper {
+    position: relative;
+    flex: 1;
+    min-height: 300px;
+    max-height: 400px;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background: var(--navy);
+  }
+  
+  .camera-feed {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  
+  .scan-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .scan-reticle {
+    width: 200px;
+    height: 200px;
+    position: relative;
+  }
+  
+  .pin-section {
+    padding: 1.5rem;
+    text-align: center;
+  }
+  
+  .pin-header h2 {
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .pin-header p {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    margin-bottom: 1.5rem;
+  }
+  
+  .pin-inputs {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+  }
+  
+  .pin-box {
+    width: 60px;
+    height: 60px;
+    font-size: 1.5rem;
+    text-align: center;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--surface-input);
+  }
+  
+  .pin-box:focus {
+    outline: none;
+    border-color: var(--teal);
+    box-shadow: var(--shadow-teal);
+  }
+  
+  .btn-large {
+    width: 100%;
+    padding: 1rem;
+    font-size: 1rem;
+  }
+  
+  .success-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--surface-page);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 2rem;
+    text-align: center;
+  }
+  
+  .success-content h1 {
+    font-size: 1.5rem;
+    margin: 1rem 0 0.5rem;
+    color: var(--success);
+  }
+  
+  .success-content p {
+    color: var(--text-muted);
+  }
+  
+  /* Student Dashboard */
+  .stat-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  
+  .stat-icon {
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+  }
+  
+  .stat-value {
+    font-size: 1.5rem;
+  }
+  
+  .notification-item {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+  
+  .notification-item:last-child {
+    border-bottom: none;
+  }
+  
+  /* Student History */
+  .history-filters {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .history-filters select {
+    width: 100%;
+  }
+  
+  .history-table {
+    display: block;
+    overflow-x: auto;
+  }
+  
+  .history-table table {
+    min-width: 100%;
+  }
+  
+  .history-table th,
+  .history-table td {
+    padding: 0.75rem 0.5rem;
+    font-size: 0.85rem;
+  }
+  
+  .badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+  }
+}
+
 /* Section 16: Legacy Utilities (keep for compatibility) ====================== */
 .text-center { text-align: center; }
 .text-right { text-align: right; }

@@ -19,16 +19,38 @@
         </div>
         
         <nav class="sidebar-nav">
-            <a class="sidebar-nav-item" href="/admin/dashboard">Dashboard</a>
-            <a class="sidebar-nav-item active" href="/admin/users">Users</a>
-            <a class="sidebar-nav-item" href="/admin/units">Units</a>
+            <a class="sidebar-nav-item" href="/admin/dashboard">
+                <i data-lucide="layout-dashboard"></i>
+                <span class="sidebar-nav-label">Dashboard</span>
+            </a>
+            <a class="sidebar-nav-item active" href="/admin/users">
+                <i data-lucide="users"></i>
+                <span class="sidebar-nav-label">Users</span>
+            </a>
+            <a class="sidebar-nav-item" href="/admin/units">
+                <i data-lucide="book-open"></i>
+                <span class="sidebar-nav-label">Units</span>
+            </a>
+            <a class="sidebar-nav-item" href="#" onclick="handleLogout(event)">
+                <i data-lucide="log-out"></i>
+                <span class="sidebar-nav-label">Logout</span>
+            </a>
         </nav>
+
+        <button class="sidebar-collapse-btn" onclick="toggleSidebar()">
+            <i data-lucide="panel-left-close"></i>
+            <span>Collapse</span>
+        </button>
     </aside>
 
     <main class="app-main">
         <div class="app-topbar">
             <h1 style="font-family:var(--font-display);font-size:1.25rem;font-weight:600;">User Management</h1>
-            <button class="btn btn-sm btn-outline" onclick="handleLogout(event)">Logout</button>
+            <div style="display:flex;align-items:center;gap:12px;">
+                <button class="btn-icon" onclick="toggleSidebar()" style="display:none;" id="mobileMenuBtn">
+                    <i data-lucide="menu"></i>
+                </button>
+            </div>
         </div>
 
         <div class="app-content">

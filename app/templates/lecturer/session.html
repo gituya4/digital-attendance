@@ -121,6 +121,12 @@
                             </span>
                         </div>
                         
+                        <div style="display:flex;gap:8px;margin-bottom:1rem;font-size:13px;color:var(--text-muted);">
+                            <span><i data-lucide="users" style="width:14px;height:14px;"></i> <span id="enrolledCount">-</span> enrolled</span>
+                            <span style="color:var(--text-muted);">•</span>
+                            <span><i data-lucide="user-plus" style="width:14px;height:14px;"></i> <span id="registeredCount">-</span> pending</span>
+                        </div>
+                        
                         <div class="progress-track" style="margin-bottom:1.25rem;">
                             <div class="progress-fill" id="attendanceBar" style="--progress-value:0%;width:0%;transition:width 0.5s ease;"></div>
                         </div>
@@ -247,10 +253,17 @@ async function loadSessionData() {
             // Set session start time
             document.getElementById('sessionStartTime').textContent = 'Started: ' + new Date().toLocaleTimeString();
             
+            // Set stats
+            if (response.stats) {
+                totalEnrolled = response.stats.enrolled_count;
+                document.getElementById('totalEnrolled').textContent = totalEnrolled;
+                document.getElementById('enrolledCount').textContent = totalEnrolled;
+                document.getElementById('registeredCount').textContent = response.stats.registered_count;
+            }
+            
             // Placeholder for unit info - would need separate API call to get full session details
             document.getElementById('unitName').textContent = 'Active Session';
             document.getElementById('unitCode').textContent = 'Session #' + sessionId;
-            document.getElementById('totalEnrolled').textContent = '-';
         }
     } catch (error) {
         console.error('Failed to load session:', error);
@@ -310,42 +323,63 @@ function startSSE() {
     
     evtSource.onmessage = function(e) {
         const data = JSON.parse(e.data);
-        if (data.success && data.attendance) {
-            const student = data.attendance;
-            document.getElementById('emptyState')?.remove();
-    
-            count++;
-            const countEl = document.getElementById('presentCount');
-            countEl.textContent = count;
-            countEl.style.animation = 'none';
-            requestAnimationFrame(() => { countEl.style.animation = 'counterPop 0.4s ease'; });
-    
-            const bar = document.getElementById('attendanceBar');
-            const pct = totalEnrolled > 0 ? Math.round((count / totalEnrolled) * 100) : 0;
-            bar.style.width = pct + '%';
-            bar.style.setProperty('--progress-value', pct + '%');
-    
-            const initials = (student.full_name || student.name || 'User').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-            const row = document.createElement('div');
-            row.style.cssText = 'display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);animation:slideInLeft 0.35s ease both;';
-            row.innerHTML = `
-                <div class="table-avatar">${initials}</div>
-                <div style="flex:1;">
-                    <div style="font-size:14px;font-weight:600;">${student.full_name || student.name}</div>
-                    <div class="mono" style="font-size:11px;color:var(--text-muted);">${student.registration_number || student.reg_number}</div>
-                </div>
-                <div style="font-size:12px;color:var(--text-muted);">${new Date().toLocaleTimeString()}</div>
-                <i data-lucide="check-circle" style="width:16px;height:16px;color:var(--success);"></i>
-            `;
-            document.getElementById('attendanceList').prepend(row);
-            lucide.createIcons();
+        if (data.success) {
+            // Handle session ended
+            if (data.session_ended) {
+                if (evtSource) evtSource.close();
+                showToast('Session has ended', 'info');
+                return;
+            }
             
-            showToast(`${student.full_name || student.name} marked present`, 'success', 2000);
+            // Handle heartbeat - ignore
+            if (data.heartbeat) {
+                return;
+            }
+            
+            // Handle new attendance
+            if (data.attendance) {
+                const student = data.attendance;
+                document.getElementById('emptyState')?.remove();
+        
+                count++;
+                const countEl = document.getElementById('presentCount');
+                countEl.textContent = count;
+                countEl.style.animation = 'none';
+                requestAnimationFrame(() => { countEl.style.animation = 'counterPop 0.4s ease'; });
+        
+                const bar = document.getElementById('attendanceBar');
+                const pct = totalEnrolled > 0 ? Math.round((count / totalEnrolled) * 100) : 0;
+                bar.style.width = pct + '%';
+                bar.style.setProperty('--progress-value', pct + '%');
+        
+                const initials = (student.full_name || student.name || 'User').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+                const row = document.createElement('div');
+                row.style.cssText = 'display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);animation:slideInLeft 0.35s ease both;';
+                row.innerHTML = `
+                    <div class="table-avatar">${initials}</div>
+                    <div style="flex:1;">
+                        <div style="font-size:14px;font-weight:600;">${student.full_name || student.name}</div>
+                        <div class="mono" style="font-size:11px;color:var(--text-muted);">${student.registration_number || student.reg_number}</div>
+                    </div>
+                    <div style="font-size:12px;color:var(--text-muted);">${new Date().toLocaleTimeString()}</div>
+                    <i data-lucide="check-circle" style="width:16px;height:16px;color:var(--success);"></i>
+                `;
+                document.getElementById('attendanceList').prepend(row);
+                lucide.createIcons();
+                
+                showToast(`${student.full_name || student.name} marked present`, 'success', 2000);
+            }
         }
     };
     
     evtSource.onerror = function() {
         console.error('SSE connection error');
+        evtSource.close();
+        // Attempt to reconnect after 3 seconds
+        setTimeout(() => {
+            console.log('Attempting to reconnect SSE...');
+            startSSE();
+        }, 3000);
     };
 }
 

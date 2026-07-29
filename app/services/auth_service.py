@@ -20,7 +20,7 @@ class AuthService:
     
     @staticmethod
     def validate_registration_number(reg_number: str) -> bool:
-        pattern = r'^[A-Z]{2}/[A-Z]{2}/\d{4}/\d{2}/\d{2}$'
+        pattern = r'^[A-Za-z]{2}/[A-Za-z]{2}/\d{4}/\d{2}/\d{2}$'
         return re.match(pattern, reg_number) is not None
     
     @staticmethod

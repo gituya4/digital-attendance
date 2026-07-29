@@ -35,6 +35,17 @@ def get_units():
         query = "SELECT COUNT(*) as count FROM enrollments WHERE unit_id = %s"
         enrolled = db.execute_query(query, (unit_id,), fetch_one=True)['count']
         
+        # Get registered students (not enrolled)
+        query = """
+            SELECT COUNT(*) as count
+            FROM users u
+            WHERE u.role = 'student' AND u.is_active = TRUE
+            AND u.user_id NOT IN (
+                SELECT student_id FROM enrollments WHERE unit_id = %s
+            )
+        """
+        registered = db.execute_query(query, (unit_id,), fetch_one=True)['count']
+        
         # Get total sessions
         query = "SELECT COUNT(*) as count FROM sessions WHERE unit_id = %s"
         total_sessions = db.execute_query(query, (unit_id,), fetch_one=True)['count']
@@ -67,6 +78,7 @@ def get_units():
             'unit_code': unit['unit_code'],
             'unit_name': unit['unit_name'],
             'enrolled_count': enrolled,
+            'registered_count': registered,
             'total_sessions': total_sessions,
             'avg_attendance_pct': avg_pct,
             'has_active_session': has_active,
@@ -194,6 +206,21 @@ def get_qr_token(session_id):
     
     qr_base64 = QRService.generate_qr_base64(token)
     
+    # Get enrolled count
+    query = "SELECT COUNT(*) as count FROM enrollments WHERE unit_id = %s"
+    enrolled = db.execute_query(query, (session['unit_id'],), fetch_one=True)['count']
+    
+    # Get registered students (not enrolled)
+    query = """
+        SELECT COUNT(*) as count
+        FROM users u
+        WHERE u.role = 'student' AND u.is_active = TRUE
+        AND u.user_id NOT IN (
+            SELECT student_id FROM enrollments WHERE unit_id = %s
+        )
+    """
+    registered = db.execute_query(query, (session['unit_id'],), fetch_one=True)['count']
+    
     return jsonify({
         'success': True,
         'qr': {
@@ -201,6 +228,11 @@ def get_qr_token(session_id):
             'qr_image': qr_base64,
             'pin': session['session_pin'],
             'expires_in': 30 - int((now - token_generated).total_seconds())
+        },
+        'stats': {
+            'enrolled_count': enrolled,
+            'registered_count': registered,
+            'unit_id': session['unit_id']
         }
     }), 200
 
@@ -218,10 +250,49 @@ def get_live_attendance(session_id):
     if int(session['lecturer_id']) != int(lecturer_id):
         return jsonify({'success': False, 'error': 'Access forbidden'}), 403
     
-    attendance = Session.get_session_attendance(session_id)
-    
     def generate():
-        yield f"data: {{'success': true, 'attendance': {attendance}}}\n\n"
+        import time
+        import json
+        
+        sent_record_ids = set()
+        
+        while True:
+            # Check if session is still active
+            session_check = Session.get_by_id(session_id)
+            if not session_check or session_check['status'] != 'active':
+                data = {'success': True, 'session_ended': True}
+                yield f"data: {json.dumps(data)}\n\n"
+                break
+            
+            # Get current attendance
+            query = """
+                SELECT ar.*, u.full_name, u.registration_number
+                FROM attendance_records ar
+                JOIN users u ON ar.student_id = u.user_id
+                WHERE ar.session_id = %s
+                ORDER BY ar.marked_at ASC
+            """
+            attendance = db.execute_query(query, (session_id,))
+            
+            # Send only new attendance records
+            for record in attendance:
+                record_id = record.get('record_id') or record.get('id')
+                if record_id and record_id not in sent_record_ids:
+                    sent_record_ids.add(record_id)
+                    
+                    # Convert datetime to string for JSON serialization
+                    record_dict = dict(record)
+                    if 'marked_at' in record_dict and record_dict['marked_at']:
+                        record_dict['marked_at'] = record_dict['marked_at'].isoformat()
+                    
+                    data = {'success': True, 'attendance': record_dict}
+                    yield f"data: {json.dumps(data)}\n\n"
+            
+            # Send heartbeat
+            data = {'success': True, 'heartbeat': True}
+            yield f"data: {json.dumps(data)}\n\n"
+            
+            time.sleep(2)
     
     return Response(generate(), mimetype='text/event-stream')
 
@@ -574,6 +645,124 @@ def notify_student(student_id):
         'success': True
     }), 201
 
+@lecturer_bp.route('/units/<int:unit_id>/registered-students', methods=['GET'])
+@jwt_required()
+@role_required('lecturer')
+def get_registered_students(unit_id):
+    claims = get_jwt()
+    lecturer_id = claims.get('sub')
+    
+    # Verify lecturer is assigned to this unit
+    query = "SELECT * FROM lecturer_units WHERE lecturer_id = %s AND unit_id = %s"
+    lecturer_unit = db.execute_query(query, (lecturer_id, unit_id), fetch_one=True)
+    if not lecturer_unit:
+        return jsonify({'success': False, 'error': 'You are not assigned to this unit'}), 403
+    
+    # Get all registered students (not enrolled)
+    query = """
+        SELECT u.user_id, u.full_name, u.email, u.registration_number
+        FROM users u
+        WHERE u.role = 'student' AND u.is_active = TRUE
+        AND u.user_id NOT IN (
+            SELECT student_id FROM enrollments WHERE unit_id = %s
+        )
+        ORDER BY u.full_name
+    """
+    registered_students = db.execute_query(query, (unit_id,))
+    
+    # Get enrolled students
+    query = """
+        SELECT u.user_id, u.full_name, u.email, u.registration_number
+        FROM users u
+        INNER JOIN enrollments e ON u.user_id = e.student_id
+        WHERE e.unit_id = %s AND u.role = 'student' AND u.is_active = TRUE
+        ORDER BY u.full_name
+    """
+    enrolled_students = db.execute_query(query, (unit_id,))
+    
+    return jsonify({
+        'success': True,
+        'registered_students': registered_students,
+        'enrolled_students': enrolled_students,
+        'total_registered': len(registered_students),
+        'total_enrolled': len(enrolled_students)
+    }), 200
+
+@lecturer_bp.route('/units/<int:unit_id>/enroll-student', methods=['POST'])
+@jwt_required()
+@role_required('lecturer')
+def enroll_student_in_unit(unit_id):
+    claims = get_jwt()
+    lecturer_id = claims.get('sub')
+    
+    data = request.get_json()
+    if not data:
+        return jsonify({'success': False, 'error': 'No data provided'}), 400
+    
+    student_id = data.get('student_id')
+    
+    if not student_id:
+        return jsonify({'success': False, 'error': 'Student ID is required'}), 400
+    
+    try:
+        student_id = int(student_id)
+    except (ValueError, TypeError):
+        return jsonify({'success': False, 'error': 'Invalid student ID'}), 400
+    
+    # Verify lecturer is assigned to this unit
+    query = "SELECT * FROM lecturer_units WHERE lecturer_id = %s AND unit_id = %s"
+    lecturer_unit = db.execute_query(query, (lecturer_id, unit_id), fetch_one=True)
+    if not lecturer_unit:
+        return jsonify({'success': False, 'error': 'You are not assigned to this unit'}), 403
+    
+    # Check if student exists and is a student
+    student = User.get_by_id(student_id)
+    if not student or student['role'] != 'student':
+        return jsonify({'success': False, 'error': 'Student not found'}), 404
+    
+    # Check if already enrolled
+    query = "SELECT id FROM enrollments WHERE student_id = %s AND unit_id = %s"
+    existing = db.execute_query(query, (student_id, unit_id), fetch_one=True)
+    if existing:
+        return jsonify({'success': True, 'message': 'Student already enrolled in this unit'}), 200
+    
+    # Insert enrollment
+    query = "INSERT INTO enrollments (student_id, unit_id) VALUES (%s, %s)"
+    db.execute_query(query, (student_id, unit_id))
+    
+    write_audit_log(lecturer_id, 'student_enrolled', f'Enrolled student {student_id} in unit {unit_id}')
+    
+    return jsonify({
+        'success': True,
+        'message': 'Student enrolled successfully'
+    }), 201
+
+@lecturer_bp.route('/units/<int:unit_id>/students/<int:student_id>', methods=['DELETE'])
+@jwt_required()
+@role_required('lecturer')
+def remove_student_from_unit(unit_id, student_id):
+    claims = get_jwt()
+    lecturer_id = claims.get('sub')
+    
+    # Verify lecturer is assigned to this unit
+    query = "SELECT * FROM lecturer_units WHERE lecturer_id = %s AND unit_id = %s"
+    lecturer_unit = db.execute_query(query, (lecturer_id, unit_id), fetch_one=True)
+    if not lecturer_unit:
+        return jsonify({'success': False, 'error': 'You are not assigned to this unit'}), 403
+    
+    try:
+        query = "DELETE FROM enrollments WHERE student_id = %s AND unit_id = %s"
+        db.execute_query(query, (student_id, unit_id))
+        
+        write_audit_log(lecturer_id, 'student_removed', f'Removed student {student_id} from unit {unit_id}')
+        
+        return jsonify({
+            'success': True,
+            'message': 'Student removed successfully'
+        }), 200
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @lecturer_bp.route('/sessions/<int:session_id>/notes', methods=['PUT'])
 @jwt_required()
 @role_required('lecturer')
@@ -695,136 +884,187 @@ def get_analytics():
     claims = get_jwt()
     lecturer_id = claims.get('sub')
     
-    # Get all units for this lecturer
-    units = Unit.get_lecturer_units(lecturer_id)
-    
-    units_data = []
-    total_sessions = 0
-    overall_avg_sum = 0
-    
-    for unit in units:
-        unit_id = unit['unit_id']
+    try:
+        # Get all units for this lecturer
+        units = Unit.get_lecturer_units(lecturer_id)
         
-        # Get total sessions for this unit
-        query = "SELECT COUNT(*) as count FROM sessions WHERE unit_id = %s AND status = 'closed'"
-        unit_total_sessions = db.execute_query(query, (unit_id,), fetch_one=True)['count']
-        total_sessions += unit_total_sessions
+        units_data = []
+        total_sessions = 0
+        overall_avg_sum = 0
         
-        # Get average attendance for this unit
-        query = """
-            SELECT AVG(percentage) as avg_pct
-            FROM (
+        for unit in units:
+            unit_id = unit['unit_id']
+            
+            # Get total sessions for this unit
+            query = "SELECT COUNT(*) as count FROM sessions WHERE unit_id = %s AND status = 'closed'"
+            unit_total_sessions = db.execute_query(query, (unit_id,), fetch_one=True)['count']
+            total_sessions += unit_total_sessions
+            
+            # Get enrolled count for this unit
+            query = "SELECT COUNT(*) as count FROM enrollments WHERE unit_id = %s"
+            enrolled_count = db.execute_query(query, (unit_id,), fetch_one=True)['count']
+            
+            if unit_total_sessions == 0 or enrolled_count == 0:
+                # No sessions or enrollments yet
+                units_data.append({
+                    'unit_id': unit_id,
+                    'unit_code': unit['unit_code'],
+                    'unit_name': unit['unit_name'],
+                    'total_sessions': 0,
+                    'avg_attendance_pct': 0,
+                    'trend': 'stable',
+                    'best_session_pct': 0,
+                    'worst_session_pct': 0,
+                    'sessions_over_time': []
+                })
+                continue
+            
+            # Get average attendance for this unit
+            query = """
+                SELECT AVG(percentage) as avg_pct
+                FROM (
+                    SELECT 
+                        CASE 
+                            WHEN COUNT(DISTINCT e.student_id) > 0 
+                            THEN (COUNT(ar.record_id) * 100.0 / COUNT(DISTINCT e.student_id)) 
+                            ELSE 0 
+                        END as percentage
+                    FROM sessions s
+                    LEFT JOIN enrollments e ON s.unit_id = e.unit_id
+                    LEFT JOIN attendance_records ar ON s.session_id = ar.session_id
+                    WHERE s.unit_id = %s AND s.status = 'closed'
+                    GROUP BY s.session_id
+                ) as session_stats
+            """
+            avg_attendance = db.execute_query(query, (unit_id,), fetch_one=True)
+            avg_pct = round(avg_attendance['avg_pct'], 2) if avg_attendance and avg_attendance['avg_pct'] else 0
+            overall_avg_sum += avg_pct
+            
+            # Get best session percentage
+            query = """
                 SELECT 
-                    (COUNT(ar.record_id) / COUNT(DISTINCT e.student_id) * 100) as percentage
+                    CASE 
+                        WHEN COUNT(DISTINCT e.student_id) > 0 
+                        THEN (COUNT(ar.record_id) * 100.0 / COUNT(DISTINCT e.student_id)) 
+                        ELSE 0 
+                    END as percentage
                 FROM sessions s
                 LEFT JOIN enrollments e ON s.unit_id = e.unit_id
                 LEFT JOIN attendance_records ar ON s.session_id = ar.session_id
                 WHERE s.unit_id = %s AND s.status = 'closed'
                 GROUP BY s.session_id
-            ) as session_stats
-        """
-        avg_attendance = db.execute_query(query, (unit_id,), fetch_one=True)
-        avg_pct = round(avg_attendance['avg_pct'], 2) if avg_attendance and avg_attendance['avg_pct'] else 0
-        overall_avg_sum += avg_pct
-        
-        # Get best and worst session percentages
-        query = """
-            SELECT 
-                (COUNT(ar.record_id) / COUNT(DISTINCT e.student_id) * 100) as percentage
-            FROM sessions s
-            LEFT JOIN enrollments e ON s.unit_id = e.unit_id
-            LEFT JOIN attendance_records ar ON s.session_id = ar.session_id
-            WHERE s.unit_id = %s AND s.status = 'closed'
-            GROUP BY s.session_id
-            ORDER BY percentage DESC
-            LIMIT 1
-        """
-        best_session = db.execute_query(query, (unit_id,), fetch_one=True)
-        best_pct = round(best_session['percentage'], 2) if best_session and best_session['percentage'] else 0
-        
-        query = """
-            SELECT 
-                (COUNT(ar.record_id) / COUNT(DISTINCT e.student_id) * 100) as percentage
-            FROM sessions s
-            LEFT JOIN enrollments e ON s.unit_id = e.unit_id
-            LEFT JOIN attendance_records ar ON s.session_id = ar.session_id
-            WHERE s.unit_id = %s AND s.status = 'closed'
-            GROUP BY s.session_id
-            ORDER BY percentage ASC
-            LIMIT 1
-        """
-        worst_session = db.execute_query(query, (unit_id,), fetch_one=True)
-        worst_pct = round(worst_session['percentage'], 2) if worst_session and worst_session['percentage'] else 0
-        
-        # Calculate trend (last 3 vs previous 3 sessions)
-        query = """
-            SELECT 
-                s.session_id,
-                (COUNT(ar.record_id) / COUNT(DISTINCT e.student_id) * 100) as percentage
-            FROM sessions s
-            LEFT JOIN enrollments e ON s.unit_id = e.unit_id
-            LEFT JOIN attendance_records ar ON s.session_id = ar.session_id
-            WHERE s.unit_id = %s AND s.status = 'closed'
-            GROUP BY s.session_id
-            ORDER BY s.start_time DESC
-            LIMIT 6
-        """
-        recent_sessions = db.execute_query(query, (unit_id,))
-        
-        trend = 'stable'
-        if len(recent_sessions) >= 6:
-            last_3_avg = sum([s['percentage'] for s in recent_sessions[:3] if s['percentage']]) / 3
-            prev_3_avg = sum([s['percentage'] for s in recent_sessions[3:6] if s['percentage']]) / 3
+                ORDER BY percentage DESC
+                LIMIT 1
+            """
+            best_session = db.execute_query(query, (unit_id,), fetch_one=True)
+            best_pct = round(best_session['percentage'], 2) if best_session and best_session['percentage'] else 0
             
-            if last_3_avg > prev_3_avg + 5:
-                trend = 'improving'
-            elif last_3_avg < prev_3_avg - 5:
-                trend = 'declining'
+            # Get worst session percentage
+            query = """
+                SELECT 
+                    CASE 
+                        WHEN COUNT(DISTINCT e.student_id) > 0 
+                        THEN (COUNT(ar.record_id) * 100.0 / COUNT(DISTINCT e.student_id)) 
+                        ELSE 0 
+                    END as percentage
+                FROM sessions s
+                LEFT JOIN enrollments e ON s.unit_id = e.unit_id
+                LEFT JOIN attendance_records ar ON s.session_id = ar.session_id
+                WHERE s.unit_id = %s AND s.status = 'closed'
+                GROUP BY s.session_id
+                ORDER BY percentage ASC
+                LIMIT 1
+            """
+            worst_session = db.execute_query(query, (unit_id,), fetch_one=True)
+            worst_pct = round(worst_session['percentage'], 2) if worst_session and worst_session['percentage'] else 0
+            
+            # Calculate trend (last 3 vs previous 3 sessions)
+            query = """
+                SELECT 
+                    s.session_id,
+                    CASE 
+                        WHEN COUNT(DISTINCT e.student_id) > 0 
+                        THEN (COUNT(ar.record_id) * 100.0 / COUNT(DISTINCT e.student_id)) 
+                        ELSE 0 
+                    END as percentage
+                FROM sessions s
+                LEFT JOIN enrollments e ON s.unit_id = e.unit_id
+                LEFT JOIN attendance_records ar ON s.session_id = ar.session_id
+                WHERE s.unit_id = %s AND s.status = 'closed'
+                GROUP BY s.session_id
+                ORDER BY s.start_time DESC
+                LIMIT 6
+            """
+            recent_sessions = db.execute_query(query, (unit_id,))
+            
+            trend = 'stable'
+            if len(recent_sessions) >= 6:
+                last_3_pct = [s['percentage'] for s in recent_sessions[:3] if s['percentage'] is not None]
+                prev_3_pct = [s['percentage'] for s in recent_sessions[3:6] if s['percentage'] is not None]
+                
+                if last_3_pct and prev_3_pct:
+                    last_3_avg = sum(last_3_pct) / len(last_3_pct)
+                    prev_3_avg = sum(prev_3_pct) / len(prev_3_pct)
+                    
+                    if last_3_avg > prev_3_avg + 5:
+                        trend = 'improving'
+                    elif last_3_avg < prev_3_avg - 5:
+                        trend = 'declining'
+            
+            # Get sessions over time (last 10)
+            query = """
+                SELECT 
+                    DATE(s.start_time) as date,
+                    CASE 
+                        WHEN COUNT(DISTINCT e.student_id) > 0 
+                        THEN (COUNT(ar.record_id) * 100.0 / COUNT(DISTINCT e.student_id)) 
+                        ELSE 0 
+                    END as pct
+                FROM sessions s
+                LEFT JOIN enrollments e ON s.unit_id = e.unit_id
+                LEFT JOIN attendance_records ar ON s.session_id = ar.session_id
+                WHERE s.unit_id = %s AND s.status = 'closed'
+                GROUP BY DATE(s.start_time)
+                ORDER BY DATE(s.start_time) DESC
+                LIMIT 10
+            """
+            sessions_over_time = db.execute_query(query, (unit_id,))
+            sessions_over_time.reverse()  # Order ascending
+            
+            units_data.append({
+                'unit_id': unit_id,
+                'unit_code': unit['unit_code'],
+                'unit_name': unit['unit_name'],
+                'total_sessions': unit_total_sessions,
+                'avg_attendance_pct': avg_pct,
+                'trend': trend,
+                'best_session_pct': best_pct,
+                'worst_session_pct': worst_pct,
+                'sessions_over_time': [{'date': str(s['date']), 'pct': round(s['pct'], 1)} for s in sessions_over_time]
+            })
         
-        # Get sessions over time (last 10)
-        query = """
-            SELECT 
-                DATE(s.start_time) as date,
-                (COUNT(ar.record_id) / COUNT(DISTINCT e.student_id) * 100) as pct
-            FROM sessions s
-            LEFT JOIN enrollments e ON s.unit_id = e.unit_id
-            LEFT JOIN attendance_records ar ON s.session_id = ar.session_id
-            WHERE s.unit_id = %s AND s.status = 'closed'
-            GROUP BY DATE(s.start_time)
-            ORDER BY DATE(s.start_time) DESC
-            LIMIT 10
-        """
-        sessions_over_time = db.execute_query(query, (unit_id,))
-        sessions_over_time.reverse()  # Order ascending
+        # Calculate overall stats
+        overall_avg = round(overall_avg_sum / len(units), 2) if units else 0
         
-        units_data.append({
-            'unit_code': unit['unit_code'],
-            'unit_name': unit['unit_name'],
-            'total_sessions': unit_total_sessions,
-            'avg_attendance_pct': avg_pct,
-            'trend': trend,
-            'best_session_pct': best_pct,
-            'worst_session_pct': worst_pct,
-            'sessions_over_time': [{'date': str(s['date']), 'pct': round(s['pct'], 1)} for s in sessions_over_time]
-        })
-    
-    # Calculate overall stats
-    overall_avg = round(overall_avg_sum / len(units), 2) if units else 0
-    
-    # Find most engaged and most at-risk units
-    most_engaged = max(units_data, key=lambda x: x['avg_attendance_pct']) if units_data else None
-    most_at_risk = min(units_data, key=lambda x: x['avg_attendance_pct']) if units_data else None
-    
-    return jsonify({
-        'success': True,
-        'analytics': {
-            'units': units_data,
-            'overall_avg': overall_avg,
-            'total_sessions_this_semester': total_sessions,
-            'most_engaged_unit': most_engaged['unit_code'] if most_engaged else None,
-            'most_at_risk_unit': most_at_risk['unit_code'] if most_at_risk else None
-        }
-    }), 200
+        # Find most engaged and most at-risk units
+        most_engaged = max(units_data, key=lambda x: x['avg_attendance_pct']) if units_data else None
+        most_at_risk = min(units_data, key=lambda x: x['avg_attendance_pct']) if units_data else None
+        
+        return jsonify({
+            'success': True,
+            'analytics': {
+                'units': units_data,
+                'overall_avg': overall_avg,
+                'total_sessions_this_semester': total_sessions,
+                'most_engaged_unit': most_engaged['unit_code'] if most_engaged else None,
+                'most_at_risk_unit': most_at_risk['unit_code'] if most_at_risk else None
+            }
+        }), 200
+    except Exception as e:
+        print(f"Error in analytics: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 # Endpoint for lecturer to update their profile
 @lecturer_bp.route('/profile', methods=['PUT'])

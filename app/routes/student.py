@@ -80,12 +80,12 @@ def mark_attendance():
     pin = data.get('pin', '').strip()
     
     if not token or not pin:
-        return jsonify({'success': False, 'error': 'Token and PIN are required'}), 400
+        return jsonify({'success': False, 'error': 'Please scan the QR code and enter the PIN to mark attendance'}), 400
     
     is_valid, payload = QRService.verify_token(token, Config.HMAC_SECRET_KEY)
     if not is_valid:
         print(f"DEBUG: Invalid QR code - token: {token[:20]}...")
-        return jsonify({'success': False, 'error': 'Invalid QR code'}), 400
+        return jsonify({'success': False, 'error': 'Invalid QR code. Please scan the code displayed by your lecturer.'}), 400
     
     session_id = payload.get('session_id')
     token_timestamp = datetime.fromisoformat(payload.get('timestamp'))
@@ -93,28 +93,28 @@ def mark_attendance():
     now = datetime.utcnow()
     if (now - token_timestamp).total_seconds() > 30:
         print(f"DEBUG: QR expired - token age: {(now - token_timestamp).total_seconds()}s")
-        return jsonify({'success': False, 'error': 'QR code has expired. Please scan the latest code.'}), 400
+        return jsonify({'success': False, 'error': 'QR code expired. Please wait for the lecturer to refresh and scan the new code.'}), 400
     
     session = Session.get_by_id(session_id)
     if not session:
         print(f"DEBUG: Session not found - session_id: {session_id}")
-        return jsonify({'success': False, 'error': 'Session not found'}), 404
+        return jsonify({'success': False, 'error': 'Session not found. Please ask your lecturer to start a new session.'}), 404
     
     if session['status'] != 'active':
         print(f"DEBUG: Session not active - status: {session['status']}")
-        return jsonify({'success': False, 'error': 'This session has ended'}), 400
+        return jsonify({'success': False, 'error': 'This session has ended. Please ask your lecturer to start a new session.'}), 400
     
     if session['session_pin'] != pin:
         print(f"DEBUG: Incorrect PIN - provided: {pin}, expected: {session['session_pin']}")
-        return jsonify({'success': False, 'error': 'Incorrect PIN'}), 400
+        return jsonify({'success': False, 'error': 'Incorrect PIN. Please check the PIN displayed on your lecturer\'s screen.'}), 400
     
     if Attendance.already_marked(session_id, student_id):
         print(f"DEBUG: Already marked - session_id: {session_id}, student_id: {student_id}")
-        return jsonify({'success': False, 'error': 'Attendance already recorded for this session'}), 400
+        return jsonify({'success': False, 'error': 'You have already marked attendance for this session'}), 400
     
     if not Unit.is_student_enrolled(student_id, session['unit_id']):
         print(f"DEBUG: Not enrolled - student_id: {student_id}, unit_id: {session['unit_id']}")
-        return jsonify({'success': False, 'error': 'You are not enrolled in this unit'}), 400
+        return jsonify({'success': False, 'error': 'You are not enrolled in this unit. Please contact the administrator.'}), 400
     
     result = Attendance.mark(session_id, student_id, session['unit_id'])
     if result:

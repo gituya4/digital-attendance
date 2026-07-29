@@ -3,147 +3,299 @@
 {% block title %}Attendance History - AttendKU{% endblock %}
 
 {% block content %}
-<div class="history-page">
-    <div class="page-header">
-        <h1>Attendance History</h1>
-        <p class="subtitle">View your complete attendance record</p>
-    </div>
-
-    <div class="history-controls">
-        <div class="filter-group">
-            <label for="unit-filter">Filter by Unit:</label>
-            <select id="unit-filter" class="form-select">
-                <option value="">All Units</option>
-            </select>
+<div class="app-shell">
+    <!-- Sidebar -->
+    <aside class="app-sidebar">
+        <div class="sidebar-logo">
+            <div class="sidebar-logo-mark">A</div>
+            <span class="sidebar-logo-text">Attend<span>KU</span></span>
         </div>
-        <button id="export-csv" class="btn btn-secondary">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="7 10 12 15 17 10"></polyline>
-                <line x1="12" y1="15" x2="12" y2="3"></line>
-            </svg>
-            Export CSV
+
+        <div class="sidebar-user">
+            <div class="sidebar-avatar" id="sidebarAvatar"></div>
+            <div class="sidebar-user-info">
+                <div class="sidebar-user-name" id="sidebarUserName">Loading...</div>
+                <div class="sidebar-user-role">Student</div>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a class="sidebar-nav-item" href="/dashboard">
+                <i data-lucide="layout-dashboard"></i>
+                <span class="sidebar-nav-label">Dashboard</span>
+            </a>
+            <a class="sidebar-nav-item active" href="/history">
+                <i data-lucide="clock"></i>
+                <span class="sidebar-nav-label">History</span>
+            </a>
+            <a class="sidebar-nav-item" href="#" onclick="handleLogout(event)">
+                <i data-lucide="log-out"></i>
+                <span class="sidebar-nav-label">Logout</span>
+            </a>
+        </nav>
+
+        <button class="sidebar-collapse-btn" onclick="toggleSidebar()">
+            <i data-lucide="panel-left-close"></i>
+            <span>Collapse</span>
         </button>
-    </div>
+    </aside>
 
-    <div class="history-table-container">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Unit Code</th>
-                    <th>Unit Name</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody id="history-tbody">
-            </tbody>
-        </table>
-        <div id="empty-state" class="empty-state" style="display: none;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                <line x1="16" y1="2" x2="16" y2="6"></line>
-                <line x1="8" y1="2" x2="8" y2="6"></line>
-                <line x1="3" y1="10" x2="21" y2="10"></line>
-            </svg>
-            <h3>No Attendance Records</h3>
-            <p>You haven't marked any attendance yet.</p>
+    <!-- Main Content -->
+    <main class="app-main">
+        <!-- Topbar -->
+        <div class="app-topbar">
+            <div style="display:flex;align-items:center;gap:12px;">
+                <button class="btn-icon" onclick="toggleSidebar()" style="display:none;" id="mobileMenuBtn">
+                    <i data-lucide="menu"></i>
+                </button>
+                <h1 style="font-family:var(--font-display);font-size:1.25rem;font-weight:600;">Attendance History</h1>
+            </div>
+            <button onclick="exportCSV()" class="btn btn-outline btn-sm">
+                <i data-lucide="download" style="width:15px;height:15px;"></i>
+                Export CSV
+            </button>
         </div>
-    </div>
+
+        <!-- Content -->
+        <div class="app-content">
+
+            <!-- Summary Stats -->
+            <div class="grid grid-4" style="margin-bottom:2rem;">
+                <div class="stat-card fade-up s1">
+                    <div class="stat-icon teal">
+                        <i data-lucide="calendar-check" style="width:22px;height:22px;"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" id="totalPresent">-</div>
+                        <div class="stat-label">Total Present</div>
+                    </div>
+                </div>
+                <div class="stat-card fade-up s2">
+                    <div class="stat-icon green">
+                        <i data-lucide="percent" style="width:22px;height:22px;"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" id="overallRate">-</div>
+                        <div class="stat-label">Overall Rate</div>
+                    </div>
+                </div>
+                <div class="stat-card fade-up s3">
+                    <div class="stat-icon blue">
+                        <i data-lucide="book-open" style="width:22px;height:22px;"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" id="unitsTracked">-</div>
+                        <div class="stat-label">Units Tracked</div>
+                    </div>
+                </div>
+                <div class="stat-card fade-up s4">
+                    <div class="stat-icon amber">
+                        <i data-lucide="user-check" style="width:22px;height:22px;"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" id="manualCount">-</div>
+                        <div class="stat-label">Manual Sign-ins</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter Row -->
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:1.25rem;flex-wrap:wrap;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <i data-lucide="filter" style="width:16px;height:16px;color:var(--text-muted);"></i>
+                    <label style="font-size:13px;font-weight:600;color:var(--text-secondary);">Filter by Unit:</label>
+                </div>
+                <select id="unit-filter" class="form-control" style="width:auto;min-width:220px;padding:0.5rem 0.875rem;">
+                    <option value="">All Units</option>
+                </select>
+                <select id="status-filter" class="form-control" style="width:auto;min-width:160px;padding:0.5rem 0.875rem;">
+                    <option value="">All Statuses</option>
+                    <option value="present">Present</option>
+                    <option value="manual">Manual</option>
+                </select>
+                <span style="margin-left:auto;font-size:13px;color:var(--text-muted);" id="recordCount"></span>
+            </div>
+
+            <!-- Table -->
+            <div class="table-wrapper fade-up s1">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Date & Time</th>
+                            <th>Unit Code</th>
+                            <th>Unit Name</th>
+                            <th>Method</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-tbody">
+                        <tr>
+                            <td colspan="5" style="text-align:center;padding:2rem;color:var(--text-muted);">
+                                <i data-lucide="loader-2" style="width:20px;height:20px;animation:spin 1s linear infinite;display:inline-block;vertical-align:middle;margin-right:8px;"></i>
+                                Loading history...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <!-- Empty State -->
+                <div id="empty-state" class="empty-state" style="display:none;">
+                    <i data-lucide="calendar-x" class="empty-state-icon"></i>
+                    <p class="empty-state-title">No Records Found</p>
+                    <p class="empty-state-text">No attendance records match your current filter.</p>
+                </div>
+            </div>
+
+        </div>
+    </main>
 </div>
 
-<div id="toast-container" class="toast-container"></div>
-
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const unitFilter = document.getElementById('unit-filter');
-    const historyTbody = document.getElementById('history-tbody');
-    const emptyState = document.getElementById('empty-state');
-    const exportBtn = document.getElementById('export-csv');
-    let allAttendance = [];
+let allAttendance = [];
+let allUnits = [];
 
-    async function loadUnits() {
-        try {
-            const response = await fetch('/api/student/units');
-            const data = await response.json();
-            if (data.success) {
-                data.units.forEach(unit => {
-                    const option = document.createElement('option');
-                    option.value = unit.unit_id;
-                    option.textContent = `${unit.unit_code} - ${unit.unit_name}`;
-                    unitFilter.appendChild(option);
-                });
-            }
-        } catch (error) {
-            showToast('Failed to load units', 'error');
-        }
+async function loadUserData() {
+    try {
+        const response = await API.get('/auth/me');
+        const user = response.user;
+        const initials = user.full_name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+        document.getElementById('sidebarAvatar').textContent = initials;
+        document.getElementById('sidebarUserName').textContent = user.full_name;
+    } catch (err) {
+        console.error('Failed to load user:', err);
     }
+}
 
-    async function loadHistory(unitId = null) {
-        try {
-            const url = unitId ? `/api/student/attendance?unit_id=${unitId}` : '/api/student/attendance';
-            const response = await fetch(url);
-            const data = await response.json();
-            
-            if (data.success) {
-                allAttendance = data.attendance;
-                renderHistory(data.attendance);
-            }
-        } catch (error) {
-            showToast('Failed to load attendance history', 'error');
-        }
-    }
-
-    function renderHistory(attendance) {
-        historyTbody.innerHTML = '';
-        
-        if (attendance.length === 0) {
-            emptyState.style.display = 'block';
-            return;
-        }
-        
-        emptyState.style.display = 'none';
-        
-        attendance.forEach(record => {
-            const row = document.createElement('tr');
-            const date = record.marked_at ? new Date(record.marked_at).toLocaleDateString() : 'N/A';
-            const statusClass = record.status === 'present' ? 'status-present' : 'status-manual';
-            
-            row.innerHTML = `
-                <td>${date}</td>
-                <td>${record.unit_code}</td>
-                <td>${record.unit_name}</td>
-                <td><span class="status-badge ${statusClass}">${record.status}</span></td>
-            `;
-            historyTbody.appendChild(row);
+async function loadUnits() {
+    try {
+        const response = await API.get('/student/units');
+        allUnits = response.units || [];
+        const select = document.getElementById('unit-filter');
+        allUnits.forEach(unit => {
+            const opt = document.createElement('option');
+            opt.value = unit.unit_id;
+            opt.textContent = `${unit.unit_code} – ${unit.unit_name}`;
+            select.appendChild(opt);
         });
+    } catch (err) {
+        console.error('Failed to load units:', err);
+    }
+}
+
+async function loadHistory() {
+    try {
+        const response = await API.get('/student/attendance');
+        allAttendance = response.attendance || [];
+
+        // Compute summary stats
+        const totalPresent = allAttendance.length;
+        const manualCount = allAttendance.filter(r => r.status === 'manual').length;
+        const unitIds = new Set(allAttendance.map(r => r.unit_id));
+
+        document.getElementById('totalPresent').textContent = totalPresent;
+        document.getElementById('manualCount').textContent = manualCount;
+        document.getElementById('unitsTracked').textContent = unitIds.size;
+
+        // Overall rate needs total sessions — approximate from units data
+        if (allUnits.length > 0) {
+            const avg = Math.round(allUnits.reduce((s, u) => s + (u.attendance_percentage || 0), 0) / allUnits.length);
+            document.getElementById('overallRate').textContent = avg + '%';
+        } else {
+            document.getElementById('overallRate').textContent = '-';
+        }
+
+        renderHistory(allAttendance);
+    } catch (err) {
+        console.error('Failed to load history:', err);
+        showToast('Failed to load attendance history', 'error');
+    }
+}
+
+function renderHistory(records) {
+    const tbody = document.getElementById('history-tbody');
+    const empty = document.getElementById('empty-state');
+
+    document.getElementById('recordCount').textContent = `${records.length} record${records.length !== 1 ? 's' : ''}`;
+
+    if (records.length === 0) {
+        tbody.innerHTML = '';
+        empty.style.display = 'flex';
+        return;
     }
 
-    unitFilter.addEventListener('change', function() {
-        const unitId = this.value || null;
-        loadHistory(unitId);
-    });
+    empty.style.display = 'none';
 
-    exportBtn.addEventListener('click', async function() {
-        try {
-            const response = await fetch('/api/student/attendance/export');
-            if (response.ok) {
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `attendance_history_${new Date().toISOString().split('T')[0]}.csv`;
-                a.click();
-                window.URL.revokeObjectURL(url);
-                showToast('CSV exported successfully', 'success');
-            }
-        } catch (error) {
-            showToast('Failed to export CSV', 'error');
+    tbody.innerHTML = records.map(record => {
+        const dt = record.marked_at ? new Date(record.marked_at) : null;
+        const dateStr = dt ? dt.toLocaleDateString('en-KE', { day:'2-digit', month:'short', year:'numeric' }) : 'N/A';
+        const timeStr = dt ? dt.toLocaleTimeString('en-KE', { hour:'2-digit', minute:'2-digit' }) : '';
+        const isManual = record.status === 'manual';
+        const methodBadge = isManual
+            ? `<span class="badge badge-warning"><i data-lucide="user-check" style="width:11px;height:11px;"></i> Manual</span>`
+            : `<span class="badge badge-teal"><i data-lucide="scan-line" style="width:11px;height:11px;"></i> QR Scan</span>`;
+        const statusBadge = `<span class="badge badge-success"><i data-lucide="check-circle" style="width:11px;height:11px;"></i> Present</span>`;
+
+        return `
+            <tr>
+                <td>
+                    <div style="font-weight:500;">${dateStr}</div>
+                    <div class="mono" style="font-size:11px;color:var(--text-muted);">${timeStr}</div>
+                </td>
+                <td><span class="mono" style="font-size:12px;color:var(--teal);font-weight:600;">${record.unit_code || '-'}</span></td>
+                <td style="font-size:14px;">${record.unit_name || '-'}</td>
+                <td>${methodBadge}</td>
+                <td>${statusBadge}</td>
+            </tr>
+        `;
+    }).join('');
+
+    lucide.createIcons();
+}
+
+function applyFilters() {
+    const unitId = document.getElementById('unit-filter').value;
+    const status = document.getElementById('status-filter').value;
+
+    let filtered = allAttendance;
+    if (unitId) filtered = filtered.filter(r => String(r.unit_id) === unitId);
+    if (status) filtered = filtered.filter(r => r.status === status);
+
+    renderHistory(filtered);
+}
+
+async function exportCSV() {
+    try {
+        const response = await fetch('/api/student/attendance/export');
+        if (response.ok) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `attendance_history_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+            showToast('Exported successfully', 'success');
+        } else {
+            showToast('Export failed', 'error');
         }
-    });
+    } catch (err) {
+        showToast('Failed to export CSV', 'error');
+    }
+}
 
-    loadUnits();
-    loadHistory();
+async function handleLogout(e) {
+    e.preventDefault();
+    try { await API.post('/auth/logout', {}); } catch (_) {}
+    window.location.href = '/login';
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadUserData();
+    await loadUnits();
+    await loadHistory();
+    document.getElementById('unit-filter').addEventListener('change', applyFilters);
+    document.getElementById('status-filter').addEventListener('change', applyFilters);
+    lucide.createIcons();
 });
 </script>
 {% endblock %}

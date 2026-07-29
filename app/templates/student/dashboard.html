@@ -97,6 +97,36 @@
                 </div>
             </div>
 
+            <!-- Attendance Overview Chart -->
+            <div class="grid grid-2" style="margin-bottom:2rem;gap:1.5rem;">
+                <div class="card fade-up s1" style="display:flex;flex-direction:column;">
+                    <div class="card-header">
+                        <span class="card-title">Attendance Overview</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:2rem;flex:1;">
+                        <div style="width:120px;height:120px;flex-shrink:0;position:relative;">
+                            <canvas id="attendanceDonut"></canvas>
+                            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;pointer-events:none;">
+                                <span style="font-family:var(--font-display);font-size:20px;font-weight:700;" id="donutLabel">-</span>
+                                <span style="font-size:10px;color:var(--text-muted);">avg</span>
+                            </div>
+                        </div>
+                        <div id="attendanceLegend" style="flex:1;display:flex;flex-direction:column;gap:8px;">
+                            <p style="font-size:13px;color:var(--text-muted);">Loading unit data...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card fade-up s2">
+                    <div class="card-header">
+                        <span class="card-title">Attendance Status</span>
+                    </div>
+                    <div id="attendanceStatusList" style="display:flex;flex-direction:column;gap:10px;">
+                        <p style="font-size:13px;color:var(--text-muted);">Loading...</p>
+                    </div>
+                </div>
+            </div>
+
             <!-- Notifications Section -->
             <div style="margin-bottom:2rem;">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
@@ -192,6 +222,7 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/@zxing/library@latest"></script>
 <script src="{{ url_for('static', filename='js/scanner.js') }}"></script>
 <script>
@@ -279,6 +310,9 @@ async function loadDashboard() {
             `}).join('');
         }
         lucide.createIcons();
+
+        // Render attendance donut chart
+        renderAttendanceChart(units);
     } catch (error) {
         console.error('Failed to load dashboard:', error);
         showToast('Failed to load units', 'error');
@@ -440,6 +474,79 @@ function showError(message) {
     const btn = document.getElementById('submitBtn');
     btn.disabled = false;
     btn.innerHTML = 'Confirm Attendance';
+}
+
+// Render attendance donut + legend
+let donutChart = null;
+function renderAttendanceChart(units) {
+    if (!units || units.length === 0) return;
+    const avg = Math.round(units.reduce((s, u) => s + (u.attendance_percentage || 0), 0) / units.length);
+    const remaining = 100 - avg;
+    const color = avg >= 75 ? '#22C55E' : avg >= 60 ? '#F59E0B' : '#EF4444';
+
+    document.getElementById('donutLabel').textContent = avg + '%';
+    document.getElementById('donutLabel').style.color = color;
+
+    const ctx = document.getElementById('attendanceDonut').getContext('2d');
+    if (donutChart) donutChart.destroy();
+    donutChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            datasets: [{
+                data: [avg, remaining],
+                backgroundColor: [color, '#E2E8F0'],
+                borderWidth: 0,
+                hoverOffset: 4
+            }]
+        },
+        options: {
+            cutout: '72%',
+            plugins: { legend: { display: false }, tooltip: { enabled: false } },
+            animation: { duration: 700 }
+        }
+    });
+
+    // Legend
+    document.getElementById('attendanceLegend').innerHTML = units.slice(0, 4).map(u => {
+        const pct = u.attendance_percentage || 0;
+        const c = pct >= 75 ? 'var(--success)' : pct >= 60 ? 'var(--warning)' : 'var(--danger)';
+        return `
+            <div style="display:flex;align-items:center;gap:8px;">
+                <div style="width:8px;height:8px;border-radius:50%;background:${c};flex-shrink:0;"></div>
+                <span class="mono" style="font-size:11px;color:var(--teal);font-weight:600;">${u.unit_code}</span>
+                <span style="font-size:12px;color:var(--text-secondary);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${u.unit_name}</span>
+                <span style="font-size:12px;font-weight:600;color:${c};">${pct}%</span>
+            </div>`;
+    }).join('');
+
+    // Status list
+    const healthy = units.filter(u => (u.attendance_percentage||0) >= 75).length;
+    const watch   = units.filter(u => (u.attendance_percentage||0) >= 60 && (u.attendance_percentage||0) < 75).length;
+    const crit    = units.filter(u => (u.attendance_percentage||0) < 60).length;
+    document.getElementById('attendanceStatusList').innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--success-bg);border-radius:var(--radius-sm);">
+            <div style="display:flex;align-items:center;gap:8px;">
+                <i data-lucide="check-circle" style="width:16px;height:16px;color:var(--success);"></i>
+                <span style="font-size:13px;font-weight:500;">On Track (≥75%)</span>
+            </div>
+            <span style="font-family:var(--font-display);font-weight:700;color:var(--success);">${healthy}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--warning-bg);border-radius:var(--radius-sm);">
+            <div style="display:flex;align-items:center;gap:8px;">
+                <i data-lucide="alert-triangle" style="width:16px;height:16px;color:var(--warning);"></i>
+                <span style="font-size:13px;font-weight:500;">Watch Zone (60–74%)</span>
+            </div>
+            <span style="font-family:var(--font-display);font-weight:700;color:var(--warning);">${watch}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--danger-bg);border-radius:var(--radius-sm);">
+            <div style="display:flex;align-items:center;gap:8px;">
+                <i data-lucide="x-circle" style="width:16px;height:16px;color:var(--danger);"></i>
+                <span style="font-size:13px;font-weight:500;">Critical (&lt;60%)</span>
+            </div>
+            <span style="font-family:var(--font-display);font-weight:700;color:var(--danger);">${crit}</span>
+        </div>
+    `;
+    lucide.createIcons();
 }
 
 // Initialize

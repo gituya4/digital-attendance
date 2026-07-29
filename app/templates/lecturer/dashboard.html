@@ -230,6 +230,32 @@
     </div>
 </div>
 
+<!-- Enroll Students Modal -->
+<div id="enrollModal" class="modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
+    <div class="card" style="width:90%;max-width:600px;margin:auto;animation:scaleIn 0.3s ease;max-height:90vh;display:flex;flex-direction:column;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;">
+            <h3 style="font-family:var(--font-display);font-size:1.125rem;font-weight:600;">Enroll Students</h3>
+            <button onclick="closeEnrollModal()" class="btn-icon" style="width:32px;height:32px;">
+                <i data-lucide="x" style="width:18px;height:18px;"></i>
+            </button>
+        </div>
+        <p style="color:var(--text-muted);font-size:14px;margin-bottom:1rem;">
+            Enroll registered students in <strong id="enrollUnitName">-</strong>
+        </p>
+        <div style="flex:1;overflow-y:auto;margin-bottom:1rem;">
+            <div id="registeredStudentsList" style="display:flex;flex-direction:column;gap:8px;">
+                <p style="color:var(--text-muted);font-size:14px;">Loading...</p>
+            </div>
+        </div>
+        <div style="display:flex;gap:12px;">
+            <button onclick="closeEnrollModal()" class="btn btn-outline" style="flex:1;">Cancel</button>
+            <button onclick="enrollSelectedStudents()" class="btn btn-primary" style="flex:1;">
+                <i data-lucide="user-plus" style="width:16px;height:16px;"></i> Enroll Selected
+            </button>
+        </div>
+    </div>
+</div>
+
 <script src="{{ url_for('static', filename='js/session.js') }}?v=2"></script>
 <script>
 let selectedUnitId = null;
@@ -296,6 +322,9 @@ async function loadDashboard() {
                             <div style="display:flex;align-items:center;gap:8px;margin-bottom:0.5rem;font-size:13px;color:var(--text-muted);">
                                 <i data-lucide="users" style="width:14px;height:14px;"></i>
                                 ${unit.enrolled_count} enrolled
+                                <span style="color:var(--text-muted);">•</span>
+                                <i data-lucide="user-plus" style="width:14px;height:14px;"></i>
+                                ${unit.registered_count || 0} pending
                             </div>
                             <div style="display:flex;align-items:center;gap:8px;margin-bottom:1rem;font-size:13px;color:var(--text-muted);">
                                 <i data-lucide="trending-up" style="width:14px;height:14px;"></i>
@@ -321,16 +350,26 @@ async function loadDashboard() {
                             <div style="display:flex;align-items:center;gap:8px;margin-bottom:0.5rem;font-size:13px;color:var(--text-muted);">
                                 <i data-lucide="users" style="width:14px;height:14px;"></i>
                                 ${unit.enrolled_count} enrolled
+                                <span style="color:var(--text-muted);">•</span>
+                                <i data-lucide="user-plus" style="width:14px;height:14px;"></i>
+                                ${unit.registered_count || 0} pending
                             </div>
                             <div style="display:flex;align-items:center;gap:8px;margin-bottom:1rem;font-size:13px;color:var(--text-muted);">
                                 <i data-lucide="trending-up" style="width:14px;height:14px;"></i>
                                 <span style="color:${pctColor};font-weight:600;">${avgPct}%</span> avg attendance
                             </div>
-                            <button onclick="startSession(${unit.unit_id}, '${unit.unit_name}')" 
+                            <button onclick="startSession(${unit.unit_id}, '${unit.unit_name}')"
                                     class="btn btn-primary btn-block btn-sm">
                                 <i data-lucide="play" style="width:14px;height:14px;"></i>
                                 Start Session
                             </button>
+                            ${unit.registered_count > 0 ? `
+                            <button onclick="openEnrollModal(${unit.unit_id}, '${unit.unit_name}')" 
+                                    class="btn btn-outline btn-block btn-sm" style="margin-top:8px;">
+                                <i data-lucide="user-plus" style="width:14px;height:14px;"></i>
+                                Enroll ${unit.registered_count} Pending
+                            </button>
+                            ` : ''}
                         </div>
                     `;
                 }
@@ -546,6 +585,80 @@ document.getElementById('startSessionModal').addEventListener('click', (e) => {
 
 document.getElementById('notifyModal').addEventListener('click', (e) => {
     if (e.target === e.currentTarget) closeNotifyModal();
+});
+
+// Enroll students functions
+let enrollSelectedUnitId = null;
+let selectedStudentIds = new Set();
+
+async function openEnrollModal(unitId, unitName) {
+    enrollSelectedUnitId = unitId;
+    selectedStudentIds.clear();
+    document.getElementById('enrollUnitName').textContent = unitName;
+    document.getElementById('enrollModal').style.display = 'flex';
+    
+    try {
+        const response = await API.get(`/lecturer/units/${unitId}/registered-students`);
+        const container = document.getElementById('registeredStudentsList');
+        
+        if (response.registered_students && response.registered_students.length > 0) {
+            container.innerHTML = response.registered_students.map(student => `
+                <div class="card" style="padding:12px;display:flex;align-items:center;gap:12px;">
+                    <input type="checkbox" id="student-${student.user_id}" value="${student.user_id}" 
+                           onchange="toggleStudentSelection(${student.user_id})"
+                           style="width:18px;height:18px;cursor:pointer;">
+                    <div style="flex:1;">
+                        <div style="font-weight:500;font-size:14px;">${student.full_name}</div>
+                        <div style="font-size:12px;color:var(--text-muted);">${student.registration_number || student.email}</div>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            container.innerHTML = '<p style="color:var(--text-muted);font-size:14px;">No registered students to enroll</p>';
+        }
+    } catch (error) {
+        document.getElementById('registeredStudentsList').innerHTML = 
+            '<p style="color:var(--danger);font-size:14px;">Failed to load students</p>';
+    }
+}
+
+function closeEnrollModal() {
+    document.getElementById('enrollModal').style.display = 'none';
+    enrollSelectedUnitId = null;
+    selectedStudentIds.clear();
+}
+
+function toggleStudentSelection(studentId) {
+    if (selectedStudentIds.has(studentId)) {
+        selectedStudentIds.delete(studentId);
+    } else {
+        selectedStudentIds.add(studentId);
+    }
+}
+
+async function enrollSelectedStudents() {
+    if (!enrollSelectedUnitId || selectedStudentIds.size === 0) {
+        showToast('Please select at least one student', 'error');
+        return;
+    }
+    
+    try {
+        let enrolledCount = 0;
+        for (const studentId of selectedStudentIds) {
+            const response = await API.post(`/lecturer/units/${enrollSelectedUnitId}/enroll-student`, { student_id: studentId });
+            if (response.success) enrolledCount++;
+        }
+        
+        showToast(`Successfully enrolled ${enrolledCount} student(s)`, 'success');
+        closeEnrollModal();
+        loadDashboard();
+    } catch (error) {
+        showToast('Failed to enroll students', 'error');
+    }
+}
+
+document.getElementById('enrollModal').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeEnrollModal();
 });
 
 async function handleLogout(e) {

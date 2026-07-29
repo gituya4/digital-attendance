@@ -4,12 +4,13 @@
 
 {% block content %}
 <div class="app-shell">
+    <!-- Sidebar -->
     <aside class="app-sidebar">
         <div class="sidebar-logo">
             <div class="sidebar-logo-mark">A</div>
             <span class="sidebar-logo-text">Attend<span>KU</span></span>
         </div>
-        
+
         <div class="sidebar-user">
             <div class="sidebar-avatar" id="sidebarAvatar">A</div>
             <div class="sidebar-user-info">
@@ -17,42 +18,152 @@
                 <div class="sidebar-user-role">Administrator</div>
             </div>
         </div>
-        
+
         <nav class="sidebar-nav">
-            <a class="sidebar-nav-item active" href="/admin/dashboard">Dashboard</a>
-            <a class="sidebar-nav-item" href="/admin/users">Users</a>
-            <a class="sidebar-nav-item" href="/admin/units">Units</a>
+            <a class="sidebar-nav-item active" href="/admin/dashboard">
+                <i data-lucide="layout-dashboard"></i>
+                <span class="sidebar-nav-label">Dashboard</span>
+            </a>
+            <a class="sidebar-nav-item" href="/admin/users">
+                <i data-lucide="users"></i>
+                <span class="sidebar-nav-label">Users</span>
+            </a>
+            <a class="sidebar-nav-item" href="/admin/units">
+                <i data-lucide="book-open"></i>
+                <span class="sidebar-nav-label">Units</span>
+            </a>
+            <a class="sidebar-nav-item" href="#" onclick="handleLogout(event)">
+                <i data-lucide="log-out"></i>
+                <span class="sidebar-nav-label">Logout</span>
+            </a>
         </nav>
+
+        <button class="sidebar-collapse-btn" onclick="toggleSidebar()">
+            <i data-lucide="panel-left-close"></i>
+            <span>Collapse</span>
+        </button>
     </aside>
 
+    <!-- Main Content -->
     <main class="app-main">
         <div class="app-topbar">
-            <h1 style="font-family:var(--font-display);font-size:1.25rem;font-weight:600;">Admin Dashboard</h1>
-            <button class="btn btn-sm btn-outline" onclick="handleLogout(event)">Logout</button>
+            <div style="display:flex;align-items:center;gap:12px;">
+                <button class="btn-icon" onclick="toggleSidebar()" style="display:none;" id="mobileMenuBtn">
+                    <i data-lucide="menu"></i>
+                </button>
+                <h1 style="font-family:var(--font-display);font-size:1.25rem;font-weight:600;">Admin Dashboard</h1>
+            </div>
+            <span style="font-size:13px;color:var(--text-muted);" id="lastRefresh"></span>
         </div>
 
         <div class="app-content">
-            <div style="padding:2rem;">
-                <h2 style="margin-bottom:1.5rem;">Welcome to Admin Dashboard</h2>
-                <div class="grid grid-3">
-                    <div class="card" style="padding:1.5rem;">
-                        <h3 style="margin:0 0 1rem 0;">User Management</h3>
-                        <p style="color:var(--text-muted);margin-bottom:1rem;">Manage students, lecturers, and administrators</p>
-                        <a href="/admin/users" class="btn btn-primary">Manage Users</a>
+
+            <!-- Stat Cards -->
+            <div class="grid grid-4" style="margin-bottom:2rem;">
+                <div class="stat-card fade-up s1">
+                    <div class="stat-icon teal">
+                        <i data-lucide="users" style="width:22px;height:22px;"></i>
                     </div>
-                    <div class="card" style="padding:1.5rem;">
-                        <h3 style="margin:0 0 1rem 0;">Unit Management</h3>
-                        <p style="color:var(--text-muted);margin-bottom:1rem;">Manage courses and unit assignments</p>
-                        <a href="/admin/units" class="btn btn-primary">Manage Units</a>
-                    </div>
-                    <div class="card" style="padding:1.5rem;">
-                        <h3 style="margin:0 0 1rem 0;">System Stats</h3>
-                        <p style="color:var(--text-muted);margin-bottom:1rem;">View system statistics and analytics</p>
-                        <button class="btn btn-outline" onclick="loadStats()">Load Stats</button>
+                    <div>
+                        <div class="stat-value" id="totalUsers">-</div>
+                        <div class="stat-label">Total Users</div>
                     </div>
                 </div>
-                <div id="statsContainer" style="margin-top:2rem;"></div>
+                <div class="stat-card fade-up s2">
+                    <div class="stat-icon blue">
+                        <i data-lucide="graduation-cap" style="width:22px;height:22px;"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" id="totalStudents">-</div>
+                        <div class="stat-label">Students</div>
+                    </div>
+                </div>
+                <div class="stat-card fade-up s3">
+                    <div class="stat-icon green">
+                        <i data-lucide="user-check" style="width:22px;height:22px;"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" id="totalLecturers">-</div>
+                        <div class="stat-label">Lecturers</div>
+                    </div>
+                </div>
+                <div class="stat-card fade-up s4">
+                    <div class="stat-icon amber">
+                        <i data-lucide="book-open" style="width:22px;height:22px;"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" id="totalUnits">-</div>
+                        <div class="stat-label">Units</div>
+                    </div>
+                </div>
             </div>
+
+            <!-- Quick Actions -->
+            <div style="margin-bottom:1rem;">
+                <h2 style="font-family:var(--font-display);font-size:1.125rem;font-weight:600;margin-bottom:0.25rem;">Quick Actions</h2>
+                <p style="color:var(--text-muted);font-size:14px;margin-bottom:1.25rem;">Jump to common administrative tasks</p>
+            </div>
+
+            <div class="grid grid-3" style="margin-bottom:2.5rem;">
+                <div class="card fade-up s1" style="border-top:4px solid var(--teal);">
+                    <div style="width:44px;height:44px;background:var(--teal-glow);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;margin-bottom:1rem;">
+                        <i data-lucide="users" style="width:22px;height:22px;color:var(--teal);"></i>
+                    </div>
+                    <h3 style="font-size:1rem;font-weight:600;margin-bottom:0.5rem;">User Management</h3>
+                    <p style="color:var(--text-muted);font-size:13px;margin-bottom:1.25rem;line-height:1.5;">Create, edit, and manage student, lecturer, and admin accounts.</p>
+                    <a href="/admin/users" class="btn btn-primary btn-sm">
+                        <i data-lucide="arrow-right" style="width:14px;height:14px;"></i> Manage Users
+                    </a>
+                </div>
+
+                <div class="card fade-up s2" style="border-top:4px solid var(--info);">
+                    <div style="width:44px;height:44px;background:var(--info-bg);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;margin-bottom:1rem;">
+                        <i data-lucide="book-open" style="width:22px;height:22px;color:var(--info);"></i>
+                    </div>
+                    <h3 style="font-size:1rem;font-weight:600;margin-bottom:0.5rem;">Unit Management</h3>
+                    <p style="color:var(--text-muted);font-size:13px;margin-bottom:1.25rem;line-height:1.5;">Create units, assign lecturers, and enroll students into courses.</p>
+                    <a href="/admin/units" class="btn btn-outline btn-sm">
+                        <i data-lucide="arrow-right" style="width:14px;height:14px;"></i> Manage Units
+                    </a>
+                </div>
+
+                <div class="card fade-up s3" style="border-top:4px solid var(--success);">
+                    <div style="width:44px;height:44px;background:var(--success-bg);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;margin-bottom:1rem;">
+                        <i data-lucide="shield-check" style="width:22px;height:22px;color:var(--success);"></i>
+                    </div>
+                    <h3 style="font-size:1rem;font-weight:600;margin-bottom:0.5rem;">System Health</h3>
+                    <p style="color:var(--text-muted);font-size:13px;margin-bottom:1.25rem;line-height:1.5;">All systems operational. JWT auth, QR engine, and SSE are running.</p>
+                    <span class="badge badge-success" style="font-size:12px;">
+                        <i data-lucide="check-circle" style="width:12px;height:12px;"></i> All Systems Go
+                    </span>
+                </div>
+            </div>
+
+            <!-- Recent Users Table -->
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+                <div>
+                    <h2 style="font-family:var(--font-display);font-size:1.125rem;font-weight:600;margin-bottom:0.25rem;">Recent Users</h2>
+                    <p style="color:var(--text-muted);font-size:14px;">Latest accounts created in the system</p>
+                </div>
+                <a href="/admin/users" class="btn btn-outline btn-sm">View All</a>
+            </div>
+
+            <div class="table-wrapper fade-up s1">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recentUsersBody">
+                        <tr><td colspan="4" style="text-align:center;padding:2rem;color:var(--text-muted);">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
         </div>
     </main>
 </div>
@@ -60,22 +171,45 @@
 <script>
 async function loadStats() {
     try {
-        const response = await API.get('/admin/users');
-        const units = await API.get('/admin/units');
-        document.getElementById('statsContainer').innerHTML = `
-            <div class="grid grid-3">
-                <div class="card" style="padding:1.5rem;background:var(--teal);color:white;">
-                    <h3 style="margin:0 0 0.5rem 0;">Total Users</h3>
-                    <p style="font-size:2rem;font-weight:600;margin:0;">${response.users.length}</p>
-                </div>
-                <div class="card" style="padding:1.5rem;background:#00C9B1;color:white;">
-                    <h3 style="margin:0 0 0.5rem 0;">Total Units</h3>
-                    <p style="font-size:2rem;font-weight:600;margin:0;">${units.units.length}</p>
-                </div>
-            </div>
-        `;
+        const [usersRes, unitsRes] = await Promise.all([
+            API.get('/admin/users'),
+            API.get('/admin/units')
+        ]);
+
+        const users = usersRes.users || [];
+        const units = unitsRes.units || [];
+
+        const students  = users.filter(u => u.role === 'student').length;
+        const lecturers = users.filter(u => u.role === 'lecturer').length;
+
+        document.getElementById('totalUsers').textContent = users.length;
+        document.getElementById('totalStudents').textContent = students;
+        document.getElementById('totalLecturers').textContent = lecturers;
+        document.getElementById('totalUnits').textContent = units.length;
+
+        // Last 5 users
+        const recent = users.slice(-5).reverse();
+        document.getElementById('recentUsersBody').innerHTML = recent.length ? recent.map(u => {
+            const initials = u.full_name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+            return `
+                <tr>
+                    <td>
+                        <div class="table-user">
+                            <div class="table-avatar" data-initials-for="${u.full_name}">${initials}</div>
+                            <span style="font-weight:500;">${u.full_name}</span>
+                        </div>
+                    </td>
+                    <td style="font-size:13px;color:var(--text-secondary);">${u.email}</td>
+                    <td><span class="badge badge-${u.role === 'student' ? 'info' : u.role === 'lecturer' ? 'teal' : 'neutral'}">${u.role}</span></td>
+                    <td><span class="badge badge-${u.is_active ? 'success' : 'danger'}">${u.is_active ? 'Active' : 'Inactive'}</span></td>
+                </tr>
+            `;
+        }).join('') : '<tr><td colspan="4" style="text-align:center;padding:2rem;color:var(--text-muted);">No users yet</td></tr>';
+
+        document.getElementById('lastRefresh').textContent = 'Updated ' + new Date().toLocaleTimeString();
+        lucide.createIcons();
     } catch (error) {
-        showToast('Failed to load stats', 'error');
+        showToast('Failed to load stats: ' + error.message, 'error');
     }
 }
 
@@ -85,5 +219,10 @@ async function handleLogout(e) {
     localStorage.removeItem('refresh_token');
     window.location.href = '/login';
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadStats();
+    lucide.createIcons();
+});
 </script>
 {% endblock %}

@@ -17,6 +17,9 @@ class User:
                staff_id: Optional[str] = None,
                department: Optional[str] = None) -> Optional[int]:
         password_hash = User.hash_password(password)
+        # Normalize registration number to uppercase for consistency
+        if registration_number:
+            registration_number = registration_number.upper()
         query = """
             INSERT INTO users (full_name, email, password_hash, role, registration_number, staff_id, department)
             VALUES (%s, %s, %s, %s, %s, %s, %s)
@@ -53,6 +56,8 @@ class User:
     
     @staticmethod
     def registration_number_exists(reg_number: str) -> bool:
+        # Normalize to uppercase for case-insensitive comparison
+        reg_number = reg_number.upper()
         query = "SELECT user_id FROM users WHERE registration_number = %s"
         return db.execute_query(query, (reg_number,), fetch_one=True) is not None
     
