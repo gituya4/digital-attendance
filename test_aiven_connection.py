@@ -22,9 +22,10 @@ try:
     
     # Check if tables exist
     tables = db.execute_query("SHOW TABLES")
-    print(f"\n✅ Found {len(tables)} tables:")
-    for table in tables:
-        print(f"  - {list(table.values())[0]}")
+    print(f"\n✅ Found {len(tables) if isinstance(tables, list) else 0} tables:")
+    if isinstance(tables, list):
+        for table in tables:
+            print(f"  - {list(table.values())[0]}")
     
 except Exception as e:
     print(f"❌ Database connection failed!")
