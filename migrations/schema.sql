@@ -1,7 +1,8 @@
-CREATE DATABASE IF NOT EXISTS attendance_db;
-USE attendance_db;
+-- Database already exists on Aiven as 'defaultdb'
+-- CREATE DATABASE IF NOT EXISTS attendance_db;
+-- USE attendance_db;
 
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     user_id INT PRIMARY KEY AUTO_INCREMENT,
     full_name VARCHAR(100) NOT NULL,
     email VARCHAR(150) UNIQUE NOT NULL,
@@ -16,7 +17,7 @@ CREATE TABLE users (
     INDEX idx_role (role)
 );
 
-CREATE TABLE units (
+CREATE TABLE IF NOT EXISTS units (
     unit_id INT PRIMARY KEY AUTO_INCREMENT,
     unit_code VARCHAR(20) UNIQUE NOT NULL,
     unit_name VARCHAR(150) NOT NULL,
@@ -27,7 +28,7 @@ CREATE TABLE units (
     INDEX idx_code (unit_code)
 );
 
-CREATE TABLE lecturer_units (
+CREATE TABLE IF NOT EXISTS lecturer_units (
     id INT PRIMARY KEY AUTO_INCREMENT,
     lecturer_id INT NOT NULL,
     unit_id INT NOT NULL,
@@ -39,7 +40,7 @@ CREATE TABLE lecturer_units (
     INDEX idx_unit (unit_id)
 );
 
-CREATE TABLE enrollments (
+CREATE TABLE IF NOT EXISTS enrollments (
     id INT PRIMARY KEY AUTO_INCREMENT,
     student_id INT NOT NULL,
     unit_id INT NOT NULL,
@@ -51,7 +52,7 @@ CREATE TABLE enrollments (
     INDEX idx_unit (unit_id)
 );
 
-CREATE TABLE sessions (
+CREATE TABLE IF NOT EXISTS sessions (
     session_id INT PRIMARY KEY AUTO_INCREMENT,
     unit_id INT NOT NULL,
     lecturer_id INT NOT NULL,
@@ -70,7 +71,7 @@ CREATE TABLE sessions (
     INDEX idx_start_time (start_time)
 );
 
-CREATE TABLE attendance_records (
+CREATE TABLE IF NOT EXISTS attendance_records (
     record_id INT PRIMARY KEY AUTO_INCREMENT,
     session_id INT NOT NULL,
     student_id INT NOT NULL,
@@ -87,7 +88,7 @@ CREATE TABLE attendance_records (
     INDEX idx_marked_at (marked_at)
 );
 
-CREATE TABLE correction_requests (
+CREATE TABLE IF NOT EXISTS correction_requests (
     request_id INT PRIMARY KEY AUTO_INCREMENT,
     student_id INT NOT NULL,
     session_id INT NOT NULL,
@@ -103,7 +104,7 @@ CREATE TABLE correction_requests (
     INDEX idx_submitted_at (submitted_at)
 );
 
-CREATE TABLE audit_log (
+CREATE TABLE IF NOT EXISTS audit_log (
     log_id INT PRIMARY KEY AUTO_INCREMENT,
     user_id INT,
     action VARCHAR(100) NOT NULL,
@@ -114,8 +115,9 @@ CREATE TABLE audit_log (
     INDEX idx_user (user_id),
     INDEX idx_action (action),
     INDEX idx_timestamp (timestamp)
+);
 
-CREATE TABLE notifications (
+CREATE TABLE IF NOT EXISTS notifications (
     notification_id INT PRIMARY KEY AUTO_INCREMENT,
     from_user_id INT REFERENCES users(user_id) ON DELETE CASCADE,
     to_user_id INT REFERENCES users(user_id) ON DELETE CASCADE,
@@ -127,5 +129,4 @@ CREATE TABLE notifications (
     INDEX idx_to_user (to_user_id),
     INDEX idx_is_read (is_read),
     INDEX idx_created_at (created_at)
-);
 );

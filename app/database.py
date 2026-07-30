@@ -15,6 +15,16 @@ class Database:
     
     @contextmanager
     def get_connection(self):
+        ssl_config = None
+        if os.getenv('DB_SSL', 'false').lower() == 'true':
+            ssl_config = {
+                'ssl_ca': os.getenv('DB_SSL_CA'),
+                'ssl_cert': os.getenv('DB_SSL_CERT'),
+                'ssl_key': os.getenv('DB_SSL_KEY'),
+            }
+            # Remove None values
+            ssl_config = {k: v for k, v in ssl_config.items() if v is not None}
+        
         conn = pymysql.connect(
             host=self.host,
             user=self.user,
@@ -22,7 +32,8 @@ class Database:
             database=self.database,
             port=self.port,
             charset='utf8mb4',
-            cursorclass=pymysql.cursors.DictCursor
+            cursorclass=pymysql.cursors.DictCursor,
+            ssl=ssl_config if ssl_config else None
         )
         try:
             yield conn
