@@ -53,3 +53,11 @@ def admin_units():
     if claims.get('role') != 'admin':
         return redirect(url_for('pages.login'))
     return render_template('admin/units.html')
+
+@pages_bp.route('/reports')
+@jwt_required()
+def reports():
+    claims = get_jwt()
+    if claims.get('role') != 'lecturer':
+        return redirect(url_for('pages.login'))
+    return render_template('lecturer/reports.html')

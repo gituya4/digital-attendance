@@ -64,6 +64,16 @@ class API {
         
         try {
             const response = await fetch(url, config);
+            
+            // Check if response is CSV (for exports)
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('text/csv')) {
+                if (!response.ok) {
+                    throw new Error('Export failed');
+                }
+                return await response.text();
+            }
+            
             const data = await response.json();
             
             if (!response.ok) {

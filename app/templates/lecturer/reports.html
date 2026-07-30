@@ -288,11 +288,30 @@ async function loadExportUnits() {
     }
 }
 
+// Load sessions for export
+async function loadExportSessions() {
+    try {
+        const response = await API.get('/lecturer/sessions');
+        if (response.success) {
+            const select = document.getElementById('session-select');
+            response.sessions.forEach(session => {
+                const option = document.createElement('option');
+                option.value = session.session_id;
+                option.textContent = `${session.unit_code} - ${session.topic} (${session.start_time})`;
+                select.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('Failed to load sessions:', error);
+    }
+}
+
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
     await loadUserData();
     await loadAnalytics();
     await loadExportUnits();
+    await loadExportSessions();
     
     const sessionSelect = document.getElementById('session-select');
     const unitSelect = document.getElementById('unit-select');
@@ -312,7 +331,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!sessionId) return;
         
         try {
-            const response = await API.get(`/units/session/${sessionId}/export`);
+            const response = await API.get(`/lecturer/sessions/${sessionId}/export`);
             const blob = new Blob([response], { type: 'text/csv' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -320,9 +339,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             a.download = `session_${sessionId}_attendance.csv`;
             a.click();
             window.URL.revokeObjectURL(url);
-            showToast('Session report exported successfully', 'success');
+            Toast.success('Session report exported successfully');
         } catch (error) {
-            showToast('Failed to export session report', 'error');
+            Toast.error('Failed to export session report');
         }
     });
 
@@ -331,7 +350,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!unitId) return;
         
         try {
-            const response = await API.get(`/units/${unitId}/export`);
+            const response = await API.get(`/lecturer/units/${unitId}/export`);
             const blob = new Blob([response], { type: 'text/csv' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -339,9 +358,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             a.download = `unit_${unitId}_attendance.csv`;
             a.click();
             window.URL.revokeObjectURL(url);
-            showToast('Unit report exported successfully', 'success');
+            Toast.success('Unit report exported successfully');
         } catch (error) {
-            showToast('Failed to export unit report', 'error');
+            Toast.error('Failed to export unit report');
         }
     });
 
