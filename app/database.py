@@ -15,16 +15,18 @@ class Database:
     
     @contextmanager
     def get_connection(self):
-       conn = pymysql.connect(
-    host=self.host,
-    user=self.user,
-    password=self.password,
-    database=self.database,
-    port=self.port,
-    charset='utf8mb4',
-    cursorclass=pymysql.cursors.DictCursor,
-    ssl={"ssl": {}}
-    )
+        conn = pymysql.connect(
+            host=self.host,
+            user=self.user,
+            password=self.password,
+            database=self.database,
+            port=self.port,
+            charset='utf8mb4',
+            cursorclass=pymysql.cursors.DictCursor,
+            ssl={
+                "ca": "ca.pem"
+            }
+        )
         try:
             yield conn
         finally:
